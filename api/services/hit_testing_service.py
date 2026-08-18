@@ -14,10 +14,13 @@ from core.rag.models.document import Document
 from core.rag.retrieval.dataset_retrieval import DatasetRetrieval
 from core.rag.retrieval.retrieval_methods import RetrievalMethod
 from graphon.model_runtime.entities import LLMMode
-from models import Account
+from models import Account, KBPermissionAction, KBResourceType
+from models.audit_log import AuditLogStatus, AuditLogType
 from models.dataset import Dataset, DatasetQuery
 from models.dataset import Document as DatasetDocument
 from models.enums import CreatorUserRole, DatasetQuerySource
+from services.audit_log_service import AuditLogService
+from services.kb_permission_service import KBPermissionService
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +116,18 @@ class HitTestingService:
         *,
         session: Session,
     ):
+        # Security baseline (requirement 3): enforce knowledge permission at the
+        # retrieval entry point, not just at the controller. Default-deny grants
+        # are resolved for the account; the tenant owner is always allowed.
+        KBPermissionService.require_permission(
+            account,
+            resource_type=KBResourceType.DATASET,
+            resource_id=dataset.id,
+            action=KBPermissionAction.DATASET_RETRIEVAL_RECALL.value,
+            session=session,
+            message="You do not have permission to retrieve from this knowledge base.",
+        )
+
         start = time.perf_counter()
 
         # get retrieval model , if the model is not setting , using default
@@ -161,6 +176,7 @@ class HitTestingService:
             reranking_mode=resolved_retrieval_model.get("reranking_mode") or "reranking_model",
             weights=resolved_retrieval_model.get("weights", None),
             document_ids_filter=document_ids_filter,
+            kb_permission_account=account,
         )
 
         end = time.perf_counter()
@@ -183,6 +199,20 @@ class HitTestingService:
                 created_by=account.id,
             )
             session.add(dataset_query)
+
+        # Audit trail (requirement 5): log every interactive knowledge retrieval.
+        AuditLogService.record(
+            tenant_id=dataset.tenant_id,
+            log_type=AuditLogType.RETRIEVAL,
+            action="hit_testing.retrieve",
+            session=session,
+            user_id=account.id,
+            user_type="account",
+            status=AuditLogStatus.SUCCESS,
+            resource_type="dataset",
+            resource_id=dataset.id,
+            detail={"query": query, "hits": len(all_documents)},
+        )
         session.commit()
 
         return cls.compact_retrieve_response(query, all_documents, session=session)
