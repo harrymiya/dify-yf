@@ -29,6 +29,8 @@ export type DetailSidebarVisibilityOptions = Pick<
 
 const VISIBLE_TO_ALL: MainNavRouteVisibility = () => true
 const CAN_MANAGE_AGENTS: MainNavRouteVisibility = (options) => options.canManageAgents
+const NOT_DATASET_OPERATOR: MainNavRouteVisibility = (options) =>
+  !options.isCurrentWorkspaceDatasetOperator
 
 function isPathUnderRoute(pathname: string, route: string) {
   return pathname === route || pathname.startsWith(`${route}/`)
@@ -74,6 +76,42 @@ export const MAIN_NAV_ROUTES = [
     icon: 'i-custom-vender-main-nav-knowledge',
     activeIcon: 'i-custom-vender-main-nav-knowledge-active',
     visibility: VISIBLE_TO_ALL,
+  },
+  {
+    key: 'kb-permissions',
+    href: '/kb-permissions',
+    labelKey: 'mainNav.kbPermissions',
+    active: (path: string) => isPathUnderRoute(path, '/kb-permissions'),
+    icon: 'i-ri-lock-2-line',
+    activeIcon: 'i-ri-lock-2-line',
+    visibility: NOT_DATASET_OPERATOR,
+  },
+  {
+    key: 'kb-audit-logs',
+    href: '/kb-audit-logs',
+    labelKey: 'mainNav.kbAuditLogs',
+    active: (path: string) => isPathUnderRoute(path, '/kb-audit-logs'),
+    icon: 'i-ri-file-list-2-line',
+    activeIcon: 'i-ri-file-list-2-line',
+    visibility: NOT_DATASET_OPERATOR,
+  },
+  {
+    key: 'kb-statistics',
+    href: '/kb-statistics',
+    labelKey: 'mainNav.kbStatistics',
+    active: (path: string) => isPathUnderRoute(path, '/kb-statistics'),
+    icon: 'i-ri-bar-chart-2-line',
+    activeIcon: 'i-ri-bar-chart-2-line',
+    visibility: NOT_DATASET_OPERATOR,
+  },
+  {
+    key: 'kb-fusion',
+    href: '/kb-fusion',
+    labelKey: 'mainNav.kbFusion',
+    active: (path: string) => isPathUnderRoute(path, '/kb-fusion'),
+    icon: 'i-ri-search-line',
+    activeIcon: 'i-ri-search-line',
+    visibility: NOT_DATASET_OPERATOR,
   },
   {
     key: 'integrations',

@@ -677,6 +677,22 @@ describe('MainNav', () => {
       'href',
       '/datasets',
     )
+    expect(screen.getByRole('link', { name: /common.mainNav.kbPermissions/ })).toHaveAttribute(
+      'href',
+      '/kb-permissions',
+    )
+    expect(screen.getByRole('link', { name: /common.mainNav.kbAuditLogs/ })).toHaveAttribute(
+      'href',
+      '/kb-audit-logs',
+    )
+    expect(screen.getByRole('link', { name: /common.mainNav.kbStatistics/ })).toHaveAttribute(
+      'href',
+      '/kb-statistics',
+    )
+    expect(screen.getByRole('link', { name: /common.mainNav.kbFusion/ })).toHaveAttribute(
+      'href',
+      '/kb-fusion',
+    )
     expect(screen.getByRole('link', { name: /common.mainNav.integrations/ })).toHaveAttribute(
       'href',
       '/integrations/model-provider',
