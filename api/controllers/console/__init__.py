@@ -34,6 +34,7 @@ for module_name in RESOURCE_MODULES:
 # Import other controllers
 from . import (
     apikey,
+    audit_logs,
     departments,
     extension,
     feature,
@@ -48,6 +49,7 @@ from . import (
     setup,
     spec,
     system,
+    usage_statistics,
     workflow_run_archive,
 )
 from .agent import composer as agent_composer
@@ -173,6 +175,7 @@ __all__ = [
     "apikey",
     "app",
     "audio",
+    "audit_logs",
     "banner",
     "billing",
     "bp",
@@ -239,6 +242,7 @@ __all__ = [
     "tool_providers",
     "trial",
     "trigger_providers",
+    "usage_statistics",
     "website",
     "workflow",
     "workflow_app_log",

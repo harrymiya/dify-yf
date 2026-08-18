@@ -40,6 +40,7 @@ from .comment import (
 )
 from .credential_permission import CredentialPermission
 from .credential_permission import CredentialType as CredentialPermissionType
+from .audit_log import AuditLog, AuditLogStatus, AuditLogType
 from .graph import GraphEntity, GraphRelation
 from .custom_role import Role, UserRole
 from .department import Department, DepartmentMember
@@ -203,6 +204,9 @@ __all__ = [
     "AppTrigger",
     "AppTriggerStatus",
     "AppTriggerType",
+    "AuditLog",
+    "AuditLogStatus",
+    "AuditLogType",
     "BuiltinToolProvider",
     "CeleryTask",
     "CeleryTaskSet",
