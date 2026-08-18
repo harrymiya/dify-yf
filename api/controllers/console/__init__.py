@@ -39,6 +39,7 @@ from . import (
     feature,
     human_input_form,
     init_validate,
+    kb_fusion,
     kb_access_policies,
     knowledge_fs_proxy,
     notification,
