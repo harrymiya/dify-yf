@@ -1,10 +1,14 @@
+import type { ComponentProps } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import AuditLogsPage from '../index'
+
+type ButtonProps = ComponentProps<'button'>
+type InputProps = ComponentProps<'input'>
 
 const h = vi.hoisted(() => {
   return {
     mockFetch: vi.fn(),
-    queryResult: <Record<string, unknown>>{},
+    queryResult: {} as Record<string, unknown>,
   }
 })
 
@@ -23,15 +27,15 @@ vi.mock('@tanstack/react-query', () => {
 })
 
 vi.mock('@langgenius/dify-ui/button', () => ({
-  Button: ({ children, onClick, disabled }: any) => (
-    <button type="button" onClick={onClick} disabled={disabled}>
+  Button: ({ children, onClick, disabled, ...props }: ButtonProps) => (
+    <button type="button" onClick={onClick} disabled={disabled} {...props}>
       {children}
     </button>
   ),
 }))
 
 vi.mock('@langgenius/dify-ui/input', () => ({
-  Input: (props: any) => <input {...props} />,
+  Input: (props: InputProps) => <input {...props} />,
 }))
 
 const sample = {

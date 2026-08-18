@@ -1,5 +1,9 @@
+import type { ComponentProps } from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import KBFusionSearch from '../index'
+
+type ButtonProps = ComponentProps<'button'>
+type InputProps = ComponentProps<'input'>
 
 const h = vi.hoisted(() => {
   return {
@@ -12,15 +16,15 @@ vi.mock('../services', () => ({
 }))
 
 vi.mock('@langgenius/dify-ui/button', () => ({
-  Button: ({ children, onClick }: any) => (
-    <button type="button" onClick={onClick}>
+  Button: ({ children, onClick, ...props }: ButtonProps) => (
+    <button type="button" onClick={onClick} {...props}>
       {children}
     </button>
   ),
 }))
 
 vi.mock('@langgenius/dify-ui/input', () => ({
-  Input: (props: any) => <input {...props} />,
+  Input: (props: InputProps) => <input {...props} />,
 }))
 
 const sampleRecords = [
@@ -45,7 +49,12 @@ const sampleRecords = [
 describe('KBFusionSearch', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    h.mockFetch.mockResolvedValue({ query: 'q', datasets: 2, strategy: 'rrf', records: sampleRecords })
+    h.mockFetch.mockResolvedValue({
+      query: 'q',
+      datasets: 2,
+      strategy: 'rrf',
+      records: sampleRecords,
+    })
   })
 
   it('shows the empty-query hint before any search', () => {

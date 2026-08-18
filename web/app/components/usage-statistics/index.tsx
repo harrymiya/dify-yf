@@ -1,28 +1,53 @@
 'use client'
 
+import type { InterfaceCallResponse, KBCallStatResponse, KBTrendResponse } from './types'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { KBPageLayout } from '@/app/components/datasets/kb-page-layout'
 import { fetchInterfaceCalls, fetchKBCallStats, fetchKBTrend } from './services'
-import type { InterfaceCallResponse, KBCallStatResponse, KBTrendResponse } from './types'
 
 const DAY_OPTIONS = [7, 30, 90]
 
+const cap = (value: string): string => {
+  if (!value) return value
+  return (
+    value.charAt(0).toUpperCase() +
+    value.slice(1).replace(/_(\w)/g, (_m, c: string) => c.toUpperCase())
+  )
+}
+
 export default function UsageStatisticsPage() {
-  const { t } = useTranslation('usageStatistics')
+  const { t: rawT } = useTranslation('usageStatistics')
+  const t = rawT as unknown as (key: string, options?: Record<string, unknown>) => string
   const [days, setDays] = useState(30)
 
-  const { data: kbStats, isLoading: kbLoading, isError: kbError, refetch: refetchKb } = useQuery<KBCallStatResponse>({
+  const {
+    data: kbStats,
+    isLoading: kbLoading,
+    isError: kbError,
+    refetch: refetchKb,
+  } = useQuery<KBCallStatResponse>({
     queryKey: ['usage-statistics', 'kb-calls', days],
     queryFn: () => fetchKBCallStats(days),
   })
 
-  const { data: trend, isLoading: trendLoading, isError: trendError, refetch: refetchTrend } = useQuery<KBTrendResponse>({
+  const {
+    data: trend,
+    isLoading: trendLoading,
+    isError: trendError,
+    refetch: refetchTrend,
+  } = useQuery<KBTrendResponse>({
     queryKey: ['usage-statistics', 'kb-trend', days],
     queryFn: () => fetchKBTrend(days),
   })
 
-  const { data: interfaces, isLoading: ifaceLoading, isError: ifaceError, refetch: refetchIface } = useQuery<InterfaceCallResponse>({
+  const {
+    data: interfaces,
+    isLoading: ifaceLoading,
+    isError: ifaceError,
+    refetch: refetchIface,
+  } = useQuery<InterfaceCallResponse>({
     queryKey: ['usage-statistics', 'interfaces', days],
     queryFn: () => fetchInterfaceCalls(days),
   })
@@ -33,20 +58,21 @@ export default function UsageStatisticsPage() {
   )
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="text-[18px]/[21.6px] font-semibold text-text-primary">{t('title')}</div>
-          <div className="mt-1 max-w-2xl text-sm text-text-tertiary">{t('desc')}</div>
-        </div>
-        <div className="flex items-center gap-1 rounded-lg bg-background-section-burn p-1">
+    <KBPageLayout
+      title={t('title')}
+      description={t('desc')}
+      contentClassName="overflow-y-auto"
+      action={
+        <div className="flex items-center gap-1 rounded-lg bg-components-panel-bg p-1 shadow-xs shadow-shadow-shadow-3">
           {DAY_OPTIONS.map((option) => (
             <button
               key={option}
               type="button"
               onClick={() => setDays(option)}
-              className={`rounded-md px-3 py-1 text-sm ${
-                days === option ? 'bg-background-default text-text-primary shadow-xs' : 'text-text-tertiary hover:text-text-secondary'
+              className={`rounded-md px-3 py-1.5 system-sm-medium ${
+                days === option
+                  ? 'bg-background-default text-text-primary shadow-xs'
+                  : 'text-text-tertiary hover:text-text-secondary'
               }`}
               aria-pressed={days === option}
               data-testid={`days-${option}`}
@@ -55,18 +81,24 @@ export default function UsageStatisticsPage() {
             </button>
           ))}
         </div>
-      </div>
-
+      }
+    >
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         {/* KB top calls */}
-        <div className="rounded-xl bg-background-section-burn p-4">
+        <div className="rounded-lg border-[0.5px] border-components-panel-border bg-components-panel-bg p-4 shadow-xs shadow-shadow-shadow-3">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-sm font-medium text-text-primary">{t('kbTopTitle')}</span>
-            {kbStats && <span className="text-xl font-semibold text-text-primary">{kbStats.total_calls}</span>}
+            {kbStats && (
+              <span className="text-xl font-semibold text-text-primary">{kbStats.total_calls}</span>
+            )}
           </div>
           {kbLoading && <div className="py-4 text-sm text-text-tertiary">{t('loading')}</div>}
           {kbError && (
-            <button type="button" className="py-4 text-sm text-text-destructive" onClick={() => refetchKb()}>
+            <button
+              type="button"
+              className="py-4 text-sm text-text-destructive"
+              onClick={() => refetchKb()}
+            >
               {t('loadError')}
             </button>
           )}
@@ -78,8 +110,12 @@ export default function UsageStatisticsPage() {
               {kbStats.data.map((item, index) => (
                 <li key={item.dataset_id} className="flex items-center gap-3 py-2">
                   <span className="w-5 shrink-0 text-xs text-text-tertiary">{index + 1}</span>
-                  <span className="min-w-0 flex-1 truncate text-sm text-text-primary">{item.dataset_id}</span>
-                  <span className="shrink-0 text-sm font-medium text-text-secondary">{item.calls}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm text-text-primary">
+                    {item.dataset_id}
+                  </span>
+                  <span className="shrink-0 text-sm font-medium text-text-secondary">
+                    {item.calls}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -87,11 +123,15 @@ export default function UsageStatisticsPage() {
         </div>
 
         {/* trend */}
-        <div className="rounded-xl bg-background-section-burn p-4">
+        <div className="rounded-lg border-[0.5px] border-components-panel-border bg-components-panel-bg p-4 shadow-xs shadow-shadow-shadow-3">
           <div className="mb-3 text-sm font-medium text-text-primary">{t('kbTrendTitle')}</div>
           {trendLoading && <div className="py-4 text-sm text-text-tertiary">{t('loading')}</div>}
           {trendError && (
-            <button type="button" className="py-4 text-sm text-text-destructive" onClick={() => refetchTrend()}>
+            <button
+              type="button"
+              className="py-4 text-sm text-text-destructive"
+              onClick={() => refetchTrend()}
+            >
               {t('loadError')}
             </button>
           )}
@@ -112,44 +152,53 @@ export default function UsageStatisticsPage() {
                 ))}
               </div>
               <div className="mt-1 text-xs text-text-tertiary">
-                {trend.data.length ? trend.data[0].bucket : ''} – {trend.data.length ? trend.data[trend.data.length - 1].bucket : ''}
+                {trend.data[0]?.bucket ?? ''} – {trend.data[trend.data.length - 1]?.bucket ?? ''}
               </div>
             </div>
           )}
         </div>
 
         {/* interface calls */}
-        <div className="rounded-xl bg-background-section-burn p-4">
+        <div className="rounded-lg border-[0.5px] border-components-panel-border bg-components-panel-bg p-4 shadow-xs shadow-shadow-shadow-3">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-sm font-medium text-text-primary">{t('interfaceTitle')}</span>
-            {interfaces && <span className="text-xl font-semibold text-text-primary">{interfaces.total_calls}</span>}
+            {interfaces && (
+              <span className="text-xl font-semibold text-text-primary">
+                {interfaces.total_calls}
+              </span>
+            )}
           </div>
           {ifaceLoading && <div className="py-4 text-sm text-text-tertiary">{t('loading')}</div>}
           {ifaceError && (
-            <button type="button" className="py-4 text-sm text-text-destructive" onClick={() => refetchIface()}>
+            <button
+              type="button"
+              className="py-4 text-sm text-text-destructive"
+              onClick={() => refetchIface()}
+            >
               {t('loadError')}
             </button>
           )}
-          {!ifaceLoading && !ifaceError && interfaces && Object.keys(interfaces.data).length === 0 && (
-            <div className="py-4 text-sm text-text-tertiary">{t('noData')}</div>
-          )}
-          {!ifaceLoading && !ifaceError && interfaces && Object.keys(interfaces.data).length > 0 && (
-            <ul className="flex flex-col divide-y divide-divider-subtle">
-              {Object.entries(interfaces.data).map(([eventType, count]) => (
-                <li key={eventType} className="flex items-center justify-between py-2">
-                  <span className="text-sm text-text-primary">{t(`type${cap(eventType)}`)}</span>
-                  <span className="text-sm font-medium text-text-secondary">{count}</span>
-                </li>
-              ))}
-            </ul>
-          )}
+          {!ifaceLoading &&
+            !ifaceError &&
+            interfaces &&
+            Object.keys(interfaces.data).length === 0 && (
+              <div className="py-4 text-sm text-text-tertiary">{t('noData')}</div>
+            )}
+          {!ifaceLoading &&
+            !ifaceError &&
+            interfaces &&
+            Object.keys(interfaces.data).length > 0 && (
+              <ul className="flex flex-col divide-y divide-divider-subtle">
+                {Object.entries(interfaces.data).map(([eventType, count]) => (
+                  <li key={eventType} className="flex items-center justify-between py-2">
+                    <span className="text-sm text-text-primary">{t(`type${cap(eventType)}`)}</span>
+                    <span className="text-sm font-medium text-text-secondary">{count}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
         </div>
       </div>
-    </div>
+    </KBPageLayout>
   )
-}
-
-const cap = (value: string): string => {
-  if (!value) return value
-  return value.charAt(0).toUpperCase() + value.slice(1).replace(/_(\w)/g, (_m, c: string) => c.toUpperCase())
 }

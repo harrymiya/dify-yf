@@ -8,10 +8,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  fetchDepartmentMembers,
   addDepartmentMembers,
   createDepartment,
   deleteDepartment,
+  fetchDepartmentMembers,
   fetchDepartmentTree,
   updateDepartment,
 } from './services'
@@ -27,14 +27,20 @@ const flatten = (nodes: DepartmentNode[]): DepartmentNode[] =>
   nodes.flatMap((node) => [node, ...flatten(node.children ?? [])])
 
 export default function DepartmentPanel() {
-  const { t } = useTranslation('datasetPermission')
+  const { t: rawT } = useTranslation('datasetPermission')
+  const t = rawT as unknown as (key: string, options?: Record<string, unknown>) => string
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState<EditingState>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [nameInput, setNameInput] = useState('')
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
-  const { data: tree = [], isLoading, isError, refetch } = useQuery<DepartmentNode[]>({
+  const {
+    data: tree = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery<DepartmentNode[]>({
     queryKey: ['dataset-permission', 'departments'],
     queryFn: fetchDepartmentTree,
   })
@@ -82,7 +88,8 @@ export default function DepartmentPanel() {
       addDepartmentMembers(id, accountIds),
     onSuccess: () => {
       toast.success(t('addMemberSuccess'))
-      if (selectedId) queryClient.invalidateQueries({ queryKey: ['dataset-permission', 'members', selectedId] })
+      if (selectedId)
+        queryClient.invalidateQueries({ queryKey: ['dataset-permission', 'members', selectedId] })
     },
     onError: () => toast.error(t('loadError')),
   })
@@ -102,8 +109,10 @@ export default function DepartmentPanel() {
     return (
       <div key={node.id}>
         <div
-          className={`group flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-state-accent-hover ${
-            selectedId === node.id ? 'bg-state-accent-solid text-text-primary-on-solid' : 'text-text-primary'
+          className={`group flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 system-sm-regular hover:bg-state-base-hover ${
+            selectedId === node.id
+              ? 'text-text-primary-on-solid bg-state-accent-solid'
+              : 'text-text-primary'
           }`}
           role="button"
           tabIndex={0}
@@ -128,7 +137,9 @@ export default function DepartmentPanel() {
           <span className="min-w-0 flex-1 truncate">{node.name}</span>
           <span className="shrink-0 text-xs opacity-60">{(node.children ?? []).length}</span>
         </div>
-        {hasChildren && isOpen && <div className="pl-4">{node.children.map((c) => renderNode(c, depth + 1))}</div>}
+        {hasChildren && isOpen && (
+          <div className="pl-4">{node.children.map((c) => renderNode(c, depth + 1))}</div>
+        )}
       </div>
     )
   }
@@ -137,33 +148,43 @@ export default function DepartmentPanel() {
     const name = nameInput.trim()
     if (!name) return
     if (editing?.mode === 'create') createMutation.mutate({ name, parent_id: editing.parentId })
-    else if (editing?.mode === 'rename' && editing.id) renameMutation.mutate({ id: editing.id, name })
+    else if (editing?.mode === 'rename' && editing.id)
+      renameMutation.mutate({ id: editing.id, name })
   }
 
   return (
-    <div className="grid h-full grid-cols-[280px_1fr] gap-4">
+    <div className="grid h-full grid-cols-1 gap-4 xl:grid-cols-[280px_1fr]">
       {/* tree */}
-      <div className="flex min-h-0 flex-col rounded-xl bg-background-section-burn p-2">
+      <div className="flex min-h-0 flex-col rounded-lg border-[0.5px] border-components-panel-border bg-components-panel-bg p-2 shadow-xs shadow-shadow-shadow-3">
         <div className="mb-2 flex items-center justify-between px-2 pt-1">
           <span className="text-sm font-medium text-text-primary">{t('departmentTab')}</span>
-          <Button size="small" variant="secondary" onClick={() => setEditing({ mode: 'create', parentId: null, name: '' })}>
+          <Button
+            size="small"
+            variant="secondary"
+            onClick={() => setEditing({ mode: 'create', parentId: null, name: '' })}
+          >
             {t('createDepartment')}
           </Button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">
           {isLoading && <div className="px-3 py-2 text-sm text-text-tertiary">{t('loading')}</div>}
           {isError && (
-            <button type="button" className="px-3 py-2 text-sm text-text-destructive" onClick={() => refetch()}>
+            <button
+              type="button"
+              className="px-3 py-2 text-sm text-text-destructive"
+              onClick={() => refetch()}
+            >
               {t('loadError')}
             </button>
           )}
-          {!isLoading && tree.length === 0 && <div className="px-3 py-2 text-sm text-text-tertiary">{t('noDepartments')}</div>}
+          {!isLoading && tree.length === 0 && (
+            <div className="px-3 py-2 text-sm text-text-tertiary">{t('noDepartments')}</div>
+          )}
           {tree.map((node) => renderNode(node, 0))}
         </div>
         {editing && editing.mode === 'create' && editing.parentId === null && (
           <div className="mt-2 flex flex-col gap-2 border-t border-divider-regular p-2">
             <Input
-              autoFocus
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && submitEdit()}
@@ -171,10 +192,22 @@ export default function DepartmentPanel() {
               data-testid="create-department-input"
             />
             <div className="flex gap-2">
-              <Button size="small" variant="primary" onClick={submitEdit} disabled={!nameInput.trim()}>
+              <Button
+                size="small"
+                variant="primary"
+                onClick={submitEdit}
+                disabled={!nameInput.trim()}
+              >
                 {t('create')}
               </Button>
-              <Button size="small" variant="tertiary" onClick={() => { setEditing(null); setNameInput('') }}>
+              <Button
+                size="small"
+                variant="tertiary"
+                onClick={() => {
+                  setEditing(null)
+                  setNameInput('')
+                }}
+              >
                 {t('cancel')}
               </Button>
             </div>
@@ -185,10 +218,12 @@ export default function DepartmentPanel() {
       {/* detail */}
       <div className="flex min-h-0 flex-col gap-4 overflow-y-auto">
         {!selected ? (
-          <div className="flex h-full items-center justify-center text-sm text-text-tertiary">{t('noDepartments')}</div>
+          <div className="flex h-full items-center justify-center rounded-lg border-[0.5px] border-components-panel-border bg-components-panel-bg system-sm-regular text-text-tertiary shadow-xs shadow-shadow-shadow-3">
+            {t('noDepartments')}
+          </div>
         ) : (
           <>
-            <div className="flex items-start justify-between gap-3 rounded-xl bg-background-section-burn p-4">
+            <div className="flex items-start justify-between gap-3 rounded-lg border-[0.5px] border-components-panel-border bg-components-panel-bg p-4 shadow-xs shadow-shadow-shadow-3">
               <div className="min-w-0">
                 <div className="text-base font-medium text-text-primary">{selected.name}</div>
                 <div className="mt-0.5 text-xs text-text-tertiary">#{selected.id}</div>
@@ -197,33 +232,61 @@ export default function DepartmentPanel() {
                 <Button
                   size="small"
                   variant="secondary"
-                  onClick={() => { setEditing({ mode: 'rename', parentId: selected.parent_id, id: selected.id, name: selected.name }); setNameInput(selected.name) }}
+                  onClick={() => {
+                    setEditing({
+                      mode: 'rename',
+                      parentId: selected.parent_id,
+                      id: selected.id,
+                      name: selected.name,
+                    })
+                    setNameInput(selected.name)
+                  }}
                 >
                   {t('rename')}
                 </Button>
-                <Button size="small" variant="secondary" onClick={() => setEditing({ mode: 'create', parentId: selected.id, name: '' })}>
+                <Button
+                  size="small"
+                  variant="secondary"
+                  onClick={() => setEditing({ mode: 'create', parentId: selected.id, name: '' })}
+                >
                   {t('createDepartment')}
                 </Button>
-                <Button size="small" variant="secondary" tone="destructive" onClick={() => deleteMutation.mutate(selected.id)}>
+                <Button
+                  size="small"
+                  variant="secondary"
+                  tone="destructive"
+                  onClick={() => deleteMutation.mutate(selected.id)}
+                >
                   {t('deleteDepartment')}
                 </Button>
               </div>
             </div>
 
             {editing && editing.mode === 'rename' && (
-              <div className="flex flex-col gap-2 rounded-xl bg-background-section-burn p-4">
+              <div className="flex flex-col gap-2 rounded-lg border-[0.5px] border-components-panel-border bg-components-panel-bg p-4 shadow-xs shadow-shadow-shadow-3">
                 <Input
-                  autoFocus
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && submitEdit()}
                   data-testid="rename-department-input"
                 />
                 <div className="flex gap-2">
-                  <Button size="small" variant="primary" onClick={submitEdit} disabled={!nameInput.trim()}>
+                  <Button
+                    size="small"
+                    variant="primary"
+                    onClick={submitEdit}
+                    disabled={!nameInput.trim()}
+                  >
                     {t('save')}
                   </Button>
-                  <Button size="small" variant="tertiary" onClick={() => { setEditing(null); setNameInput('') }}>
+                  <Button
+                    size="small"
+                    variant="tertiary"
+                    onClick={() => {
+                      setEditing(null)
+                      setNameInput('')
+                    }}
+                  >
                     {t('cancel')}
                   </Button>
                 </div>
@@ -231,26 +294,37 @@ export default function DepartmentPanel() {
             )}
 
             {editing && editing.mode === 'create' && editing.parentId === selected.id && (
-              <div className="flex flex-col gap-2 rounded-xl bg-background-section-burn p-4">
+              <div className="flex flex-col gap-2 rounded-lg border-[0.5px] border-components-panel-border bg-components-panel-bg p-4 shadow-xs shadow-shadow-shadow-3">
                 <Input
-                  autoFocus
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && submitEdit()}
                   data-testid="create-sub-department-input"
                 />
                 <div className="flex gap-2">
-                  <Button size="small" variant="primary" onClick={submitEdit} disabled={!nameInput.trim()}>
+                  <Button
+                    size="small"
+                    variant="primary"
+                    onClick={submitEdit}
+                    disabled={!nameInput.trim()}
+                  >
                     {t('create')}
                   </Button>
-                  <Button size="small" variant="tertiary" onClick={() => { setEditing(null); setNameInput('') }}>
+                  <Button
+                    size="small"
+                    variant="tertiary"
+                    onClick={() => {
+                      setEditing(null)
+                      setNameInput('')
+                    }}
+                  >
                     {t('cancel')}
                   </Button>
                 </div>
               </div>
             )}
 
-            <div className="rounded-xl bg-background-section-burn p-4">
+            <div className="rounded-lg border-[0.5px] border-components-panel-border bg-components-panel-bg p-4 shadow-xs shadow-shadow-shadow-3">
               <div className="mb-3 flex items-center justify-between">
                 <span className="text-sm font-medium text-text-primary">{t('members')}</span>
                 <MemberPicker
@@ -278,12 +352,18 @@ export default function DepartmentPanel() {
 }
 
 function MemberPicker({ onAdd }: { existing: string[]; onAdd: (ids: string[]) => void }) {
-  const { t } = useTranslation('datasetPermission')
+  const { t: rawT } = useTranslation('datasetPermission')
+  const t = rawT as unknown as (key: string, options?: Record<string, unknown>) => string
   const [input, setInput] = useState('')
   const add = () => {
     const value = input.trim()
     if (!value) return
-    onAdd(value.split(',').map((s) => s.trim()).filter(Boolean))
+    onAdd(
+      value
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    )
     setInput('')
   }
   return (

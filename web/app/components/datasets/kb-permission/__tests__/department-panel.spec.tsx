@@ -1,5 +1,18 @@
+import type { ComponentProps } from 'react'
+import type { DepartmentNode } from '../types'
 import { fireEvent, render, screen } from '@testing-library/react'
 import DepartmentPanel from '../department-panel'
+
+type QueryArgs = {
+  queryKey: unknown
+}
+type MutationArgs = {
+  mutationFn: (...args: unknown[]) => unknown
+}
+type ButtonProps = ComponentProps<'button'> & {
+  variant?: string
+}
+type InputProps = ComponentProps<'input'>
 
 const h = vi.hoisted(() => {
   return {
@@ -7,7 +20,7 @@ const h = vi.hoisted(() => {
     mockCreateDepartment: vi.fn(),
     mockFetchMembers: vi.fn(),
     mockInvalidate: vi.fn(),
-    tree: [] as any[],
+    tree: [] as DepartmentNode[],
   }
 })
 
@@ -21,16 +34,16 @@ vi.mock('../services', () => ({
 }))
 
 vi.mock('@tanstack/react-query', () => {
-  const useQuery = vi.fn(({ queryKey }: any) => {
-    if ((queryKey as string[]).join(',').includes('members'))
-      return { data: [], isLoading: false, isError: false } as any
-    return { data: h.tree, isLoading: false, isError: false, refetch: vi.fn() } as any
+  const useQuery = vi.fn(({ queryKey }: QueryArgs) => {
+    const key = Array.isArray(queryKey) ? queryKey.join(',') : String(queryKey)
+    if (key.includes('members')) return { data: [], isLoading: false, isError: false }
+    return { data: h.tree, isLoading: false, isError: false, refetch: vi.fn() }
   })
   return {
     useQuery,
     useQueryClient: () => ({ invalidateQueries: h.mockInvalidate }),
-    useMutation: ({ mutationFn }: any) => ({
-      mutate: (...args: any[]) => mutationFn(...args),
+    useMutation: ({ mutationFn }: MutationArgs) => ({
+      mutate: (...args: unknown[]) => mutationFn(...args),
       isPending: false,
       isError: false,
       error: null,
@@ -43,7 +56,7 @@ vi.mock('@langgenius/dify-ui/toast', () => ({
 }))
 
 vi.mock('@langgenius/dify-ui/button', () => ({
-  Button: ({ children, onClick, disabled, variant }: any) => (
+  Button: ({ children, onClick, disabled, variant }: ButtonProps) => (
     <button type="button" onClick={onClick} disabled={disabled} data-variant={variant}>
       {children}
     </button>
@@ -51,7 +64,7 @@ vi.mock('@langgenius/dify-ui/button', () => ({
 }))
 
 vi.mock('@langgenius/dify-ui/input', () => ({
-  Input: (props: any) => <input {...props} />,
+  Input: (props: InputProps) => <input {...props} />,
 }))
 
 describe('DepartmentPanel', () => {
@@ -64,7 +77,16 @@ describe('DepartmentPanel', () => {
         parent_id: null,
         name: 'Engineering',
         sort: 0,
-        children: [{ id: 'dep-2', tenant_id: 't1', parent_id: 'dep-1', name: 'Backend', sort: 0, children: [] }],
+        children: [
+          {
+            id: 'dep-2',
+            tenant_id: 't1',
+            parent_id: 'dep-1',
+            name: 'Backend',
+            sort: 0,
+            children: [],
+          },
+        ],
       },
     ]
     h.mockFetchTree.mockResolvedValue(h.tree)
@@ -75,6 +97,7 @@ describe('DepartmentPanel', () => {
   it('renders the department tree', async () => {
     render(<DepartmentPanel />)
     expect(await screen.findByText('Engineering')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'toggle' }))
     expect(screen.getByText('Backend')).toBeInTheDocument()
   })
 

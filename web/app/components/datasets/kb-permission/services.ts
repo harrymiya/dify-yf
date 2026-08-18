@@ -1,4 +1,3 @@
-import { del, get, patch, post } from '@/service/base'
 import type {
   DepartmentMembersResponse,
   DepartmentNode,
@@ -9,6 +8,8 @@ import type {
   SimpleDataResponse,
   SimpleResponse,
 } from './types'
+// oxlint-disable-next-line no-restricted-imports -- feature endpoints are not generated yet.
+import { del, get, patch, post } from '@/service/base'
 
 const DEPARTMENT_API = '/workspaces/current/departments'
 const GRANT_API = '/workspaces/current/kb-permission-grants'
@@ -40,7 +41,10 @@ export const updateDepartment = async (
   await patch<SimpleResponse>(`${DEPARTMENT_API}/${departmentId}`, {
     body: {
       name: payload.name,
-      parent_id: payload.parent_id === null || payload.parent_id === undefined ? undefined : payload.parent_id,
+      parent_id:
+        payload.parent_id === null || payload.parent_id === undefined
+          ? undefined
+          : payload.parent_id,
       sort: payload.sort,
     },
   })
@@ -55,13 +59,19 @@ export const fetchDepartmentMembers = async (departmentId: string): Promise<stri
   return resp.data ?? []
 }
 
-export const addDepartmentMembers = async (departmentId: string, accountIds: string[]): Promise<void> => {
+export const addDepartmentMembers = async (
+  departmentId: string,
+  accountIds: string[],
+): Promise<void> => {
   await post<SimpleResponse>(`${DEPARTMENT_API}/${departmentId}/members`, {
     body: { account_ids: accountIds },
   })
 }
 
-export const fetchGrants = async (resourceType: string, resourceId?: string): Promise<GrantListResponse> => {
+export const fetchGrants = async (
+  resourceType: string,
+  resourceId?: string,
+): Promise<GrantListResponse> => {
   return await get<GrantListResponse>(GRANT_API, {
     params: {
       resource_type: resourceType,

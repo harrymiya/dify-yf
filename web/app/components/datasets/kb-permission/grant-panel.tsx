@@ -1,15 +1,14 @@
 'use client'
 
-import type { DataSetListResponse } from '@/models/datasets'
-import { get } from '@/service/base'
-import { useMembers } from '@/service/use-common'
+import type { DepartmentNode, KBPermissionSubjectType } from './types'
 import { Button } from '@langgenius/dify-ui/button'
 import { toast } from '@langgenius/dify-ui/toast'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { fetchDatasets } from '@/service/datasets'
+import { useMembers } from '@/service/use-common'
 import { createGrant, fetchDepartmentTree, fetchGrants, revokeGrant } from './services'
-import type { DepartmentNode, KBPermissionSubjectType } from './types'
 
 type ResourceType = 'dataset' | 'document'
 
@@ -36,7 +35,8 @@ const DATASET_ACTIONS: ActionKey[] = [
 const DOCUMENT_ACTIONS: ActionKey[] = ['DocumentRead', 'DocumentEdit', 'DocumentDownload']
 
 export default function GrantPanel() {
-  const { t } = useTranslation('datasetPermission')
+  const { t: rawT } = useTranslation('datasetPermission')
+  const t = rawT as unknown as (key: string, options?: Record<string, unknown>) => string
   const queryClient = useQueryClient()
   const [resourceType, setResourceType] = useState<ResourceType>('dataset')
   const [resourceId, setResourceId] = useState('')
@@ -44,14 +44,14 @@ export default function GrantPanel() {
   const [subjectId, setSubjectId] = useState('')
   const [selectedActions, setSelectedActions] = useState<ActionKey[]>([])
 
-  const { data: datasetPage } = useQuery<DataSetListResponse>({
+  const { data: datasetPage } = useQuery({
     queryKey: ['dataset-permission', 'datasets'],
-    queryFn: () => get<DataSetListResponse>('/datasets?limit=100&page=1'),
+    queryFn: () => fetchDatasets({ url: '/datasets', params: { limit: 100, page: 1 } }),
   })
   const datasets = datasetPage?.data ?? []
 
   const { data: members } = useMembers()
-  const accounts = members?.accounts ?? []
+  const accounts = useMemo(() => members?.accounts ?? [], [members?.accounts])
 
   const { data: departmentTree = [] } = useQuery<DepartmentNode[]>({
     queryKey: ['dataset-permission', 'departments'],
@@ -65,8 +65,7 @@ export default function GrantPanel() {
 
   const { data: grants = [] } = useQuery({
     queryKey: ['dataset-permission', 'grants', resourceType, resourceId],
-    queryFn: () =>
-      fetchGrants(resourceType, resourceId).then((r) => r.data ?? []),
+    queryFn: () => fetchGrants(resourceType, resourceId).then((r) => r.data ?? []),
     enabled: !!resourceId,
   })
 
@@ -75,13 +74,17 @@ export default function GrantPanel() {
   const actionLabel = (key: ActionKey) => t(`action${key}`)
 
   const subjectOptions = useMemo(() => {
-    if (subjectType === 'account') return accounts.map((a) => ({ value: a.id, label: a.name || a.email }))
-    if (subjectType === 'department') return departments.map((d) => ({ value: d.id, label: d.name }))
+    if (subjectType === 'account')
+      return accounts.map((a) => ({ value: a.id, label: a.name || a.email }))
+    if (subjectType === 'department')
+      return departments.map((d) => ({ value: d.id, label: d.name }))
     return []
   }, [subjectType, accounts, departments])
 
   const toggleAction = (key: ActionKey) => {
-    setSelectedActions((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]))
+    setSelectedActions((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+    )
   }
 
   const canSubmit = !!resourceId && !!subjectId && selectedActions.length > 0
@@ -98,13 +101,19 @@ export default function GrantPanel() {
       })
       toast.success(t('granted'))
       setSelectedActions([])
-      queryClient.invalidateQueries({ queryKey: ['dataset-permission', 'grants', resourceType, resourceId] })
+      queryClient.invalidateQueries({
+        queryKey: ['dataset-permission', 'grants', resourceType, resourceId],
+      })
     } catch {
       toast.error(t('loadError'))
     }
   }
 
-  const revoke = async (payload: { subjectId: string; subjectType: KBPermissionSubjectType; actions?: ActionKey[] }) => {
+  const revoke = async (payload: {
+    subjectId: string
+    subjectType: KBPermissionSubjectType
+    actions?: ActionKey[]
+  }) => {
     try {
       await revokeGrant({
         subject_type: payload.subjectType,
@@ -114,7 +123,9 @@ export default function GrantPanel() {
         resource_id: resourceId,
       })
       toast.success(t('revoked'))
-      queryClient.invalidateQueries({ queryKey: ['dataset-permission', 'grants', resourceType, resourceId] })
+      queryClient.invalidateQueries({
+        queryKey: ['dataset-permission', 'grants', resourceType, resourceId],
+      })
     } catch {
       toast.error(t('loadError'))
     }
@@ -127,9 +138,9 @@ export default function GrantPanel() {
   }
 
   return (
-    <div className="grid h-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4">
+    <div className="grid h-full grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       {/* grant form */}
-      <div className="flex flex-col gap-4 overflow-y-auto rounded-xl bg-background-section-burn p-4">
+      <div className="flex flex-col gap-4 overflow-y-auto rounded-lg border-[0.5px] border-components-panel-border bg-components-panel-bg p-4 shadow-xs shadow-shadow-shadow-3">
         <div>
           <div className="text-base font-medium text-text-primary">{t('grantTitle')}</div>
           <div className="mt-0.5 text-xs text-text-tertiary">{t('grantDesc')}</div>
@@ -144,7 +155,7 @@ export default function GrantPanel() {
                 setResourceType(e.target.value as ResourceType)
                 setResourceId('')
               }}
-              className="h-8 rounded-lg border border-divider-regular bg-background-default px-2 text-sm text-text-primary"
+              className="h-8 rounded-lg border border-divider-regular bg-background-default px-2 system-sm-regular text-text-primary"
               data-testid="resource-type-select"
             >
               <option value="dataset">{t('resourceDataset')}</option>
@@ -153,7 +164,7 @@ export default function GrantPanel() {
             <select
               value={resourceId}
               onChange={(e) => setResourceId(e.target.value)}
-              className="h-8 min-w-0 flex-1 rounded-lg border border-divider-regular bg-background-default px-2 text-sm text-text-primary"
+              className="h-8 min-w-0 flex-1 rounded-lg border border-divider-regular bg-background-default px-2 system-sm-regular text-text-primary"
               data-testid="resource-select"
             >
               <option value="">{t('selectResource')}</option>
@@ -175,7 +186,7 @@ export default function GrantPanel() {
                 setSubjectType(e.target.value as KBPermissionSubjectType)
                 setSubjectId('')
               }}
-              className="h-8 rounded-lg border border-divider-regular bg-background-default px-2 text-sm text-text-primary"
+              className="h-8 rounded-lg border border-divider-regular bg-background-default px-2 system-sm-regular text-text-primary"
               data-testid="subject-type-select"
             >
               <option value="account">{t('subjectTypeAccount')}</option>
@@ -184,7 +195,7 @@ export default function GrantPanel() {
             <select
               value={subjectId}
               onChange={(e) => setSubjectId(e.target.value)}
-              className="h-8 min-w-0 flex-1 rounded-lg border border-divider-regular bg-background-default px-2 text-sm text-text-primary"
+              className="h-8 min-w-0 flex-1 rounded-lg border border-divider-regular bg-background-default px-2 system-sm-regular text-text-primary"
               data-testid="subject-select"
             >
               <option value="">{t('selectSubject')}</option>
@@ -203,7 +214,7 @@ export default function GrantPanel() {
             {actions.map((key) => (
               <label
                 key={key}
-                className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-text-primary hover:bg-state-accent-hover"
+                className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 system-sm-regular text-text-primary hover:bg-state-base-hover"
               >
                 <input
                   type="checkbox"
@@ -225,7 +236,7 @@ export default function GrantPanel() {
       </div>
 
       {/* existing grants */}
-      <div className="flex min-h-0 flex-col overflow-y-auto rounded-xl bg-background-section-burn p-4">
+      <div className="flex min-h-0 flex-col overflow-y-auto rounded-lg border-[0.5px] border-components-panel-border bg-components-panel-bg p-4 shadow-xs shadow-shadow-shadow-3">
         <div className="mb-2 text-sm font-medium text-text-primary">{t('existingGrants')}</div>
         {!resourceId ? (
           <div className="py-8 text-center text-sm text-text-tertiary">{t('selectResource')}</div>
@@ -243,7 +254,9 @@ export default function GrantPanel() {
             <tbody>
               {grants.map((grant) => (
                 <tr key={grant.id} className="border-b border-divider-subtle">
-                  <td className="py-2 pr-2 text-text-primary">{subjectLabel(grant.subject_type, grant.subject_id)}</td>
+                  <td className="py-2 pr-2 text-text-primary">
+                    {subjectLabel(grant.subject_type, grant.subject_id)}
+                  </td>
                   <td className="py-2 pr-2 text-text-secondary">
                     {t(`action${grant.action as ActionKey}`)}
                   </td>
@@ -253,7 +266,11 @@ export default function GrantPanel() {
                       variant="ghost"
                       tone="destructive"
                       onClick={() =>
-                        revoke({ subjectId: grant.subject_id, subjectType: grant.subject_type, actions: [grant.action as ActionKey] })
+                        revoke({
+                          subjectId: grant.subject_id,
+                          subjectType: grant.subject_type,
+                          actions: [grant.action as ActionKey],
+                        })
                       }
                     >
                       {t('revoke')}
