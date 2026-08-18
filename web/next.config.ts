@@ -46,6 +46,27 @@ const nextConfig: NextConfig = {
       },
     ]
   },
+  async rewrites() {
+    // Dev-only: proxy API / WebSocket traffic to the local backend so the
+    // browser always talks to the same origin (http://localhost:3000) and never
+    // hits CORS. Production (Docker/nginx) does this with its own reverse proxy.
+    if (!isDev) return []
+    const target = process.env.DEV_API_TARGET || 'http://localhost:5001'
+    return [
+      {
+        source: '/console/api/:path*',
+        destination: `${target}/console/api/:path*`,
+      },
+      {
+        source: '/api/:path*',
+        destination: `${target}/api/:path*`,
+      },
+      {
+        source: '/socket.io/:path*',
+        destination: `${target}/socket.io/:path*`,
+      },
+    ]
+  },
   output: 'standalone',
   compiler: {
     removeConsole: isDev ? false : { exclude: ['warn', 'error'] },

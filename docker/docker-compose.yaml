@@ -227,6 +227,7 @@ services:
   api:
     <<: *shared-api-worker-config
     image: langgenius/dify-api:1.16.1
+    restart: "no"
     environment:
       MODE: api
       SENTRY_DSN: ${API_SENTRY_DSN:-}
@@ -277,6 +278,7 @@ services:
   api_websocket:
     <<: *shared-api-worker-config
     image: langgenius/dify-api:1.16.1
+    restart: "no"
     profiles:
       - collaboration
     environment:
@@ -308,6 +310,7 @@ services:
   worker:
     <<: *shared-worker-config
     image: langgenius/dify-api:1.16.1
+    restart: "no"
     environment:
       MODE: worker
       SENTRY_DSN: ${API_SENTRY_DSN:-}
@@ -357,6 +360,7 @@ services:
   worker_beat:
     <<: *shared-worker-beat-config
     image: langgenius/dify-api:1.16.1
+    restart: "no"
     environment:
       MODE: beat
     depends_on:
@@ -390,7 +394,7 @@ services:
   # Frontend web application.
   web:
     image: langgenius/dify-web:1.16.1
-    restart: always
+    restart: "no"
     env_file:
       - path: ./envs/core-services/web.env
         required: false
@@ -517,7 +521,7 @@ services:
   # The DifySandbox
   sandbox:
     image: langgenius/dify-sandbox:0.2.15
-    restart: always
+    restart: "no"
     env_file:
       - path: ./envs/core-services/sandbox.env
         required: false
@@ -555,7 +559,7 @@ services:
   # /files/* endpoints (see ssrf_proxy/squid-agent.conf.template).
   local_sandbox:
     image: langgenius/dify-agent-local-sandbox:1.16.1
-    restart: always
+    restart: "no"
     env_file:
       - path: ./envs/core-services/local-sandbox.env
         required: false
@@ -577,7 +581,7 @@ services:
   # plugin daemon
   plugin_daemon:
     image: langgenius/dify-plugin-daemon:0.6.10-local
-    restart: always
+    restart: "no"
     env_file:
       - path: ./envs/core-services/shared.env
         required: false
@@ -665,7 +669,7 @@ services:
   # Dify Agent backend service.
   agent_backend:
     image: langgenius/dify-agent-backend:1.16.1
-    restart: always
+    restart: "no"
     env_file:
       - path: ./envs/core-services/dify-agent.env
         required: false
@@ -714,7 +718,7 @@ services:
   # Dedicated SSRF proxy for the dify-agent local_sandbox.
   agent_ssrf_proxy:
     image: ubuntu/squid:latest
-    restart: always
+    restart: "no"
     volumes:
       - ./ssrf_proxy/squid-agent.conf.template:/etc/squid/squid.conf.template
       - ./ssrf_proxy/squid-common.conf.template:/etc/squid/dify_common.conf.template
@@ -740,7 +744,7 @@ services:
   # https://docs.dify.ai/learn-more/faq/install-faq#18-why-is-ssrf-proxy-needed%3F
   ssrf_proxy:
     image: ubuntu/squid:latest
-    restart: always
+    restart: "no"
     volumes:
       - ./ssrf_proxy/squid.conf.template:/etc/squid/squid.conf.template
       - ./ssrf_proxy/squid-common.conf.template:/etc/squid/dify_common.conf.template
@@ -785,7 +789,7 @@ services:
   # used for reverse proxying the API service and Web service.
   nginx:
     image: nginx:latest
-    restart: always
+    restart: "no"
     volumes:
       - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template
       - ./nginx/proxy.conf.template:/etc/nginx/proxy.conf.template
