@@ -1,5 +1,67 @@
 ![cover-v5-optimized](./images/GitHub_README_if.png)
 
+> **定制版说明**：本仓库 `dify-yf` 是从 [langgenius/dify](https://github.com/langgenius/dify) fork 的定制版本，在开源版基础上针对**企业知识库场景**新增三项定制能力（知识查询权限、知识库使用统计、知识库审计日志）。详细规划与进度见文末 **[「本 fork 定制说明」](#本-fork-定制说明)**。
+
+<details>
+<summary><b>📌 本 fork 定制说明（点开查看）</b></summary>
+
+<br>
+
+> 以下内容为本仓库 `dify-yf` 的定制规划文档，与上游 `langgenius/dify` 的官方 README 相互独立。
+
+## 本 fork 定制说明
+
+本仓库在原版 Dify 开源版基础上，围绕**企业知识库（KB）管理**进行定制开发。功能开发遵循**分支隔离**策略，各定制功能分别在独立分支上进行，避免相互干扰，待稳定后合入 `main`。
+
+### 定制功能总览
+
+| # | 功能 | 现状 | 定制分支 | 状态 |
+|----|------|------|----------|------|
+| 3️⃣ | 知识查询权限设置 | 开源版已有「角色×数据集×操作」三层 RBAC，缺**部门维度**与**文档级粒度** | `feature/kb-permission` | 规划中 |
+| 4️⃣ | 知识库使用情况统计 | 无专项报表/接口，仅有 `hit_count` 等底层数据 | `feature/kb-statistics` | 规划中 |
+| 5️⃣ | 日志（Log）功能 | 缺少知识库侧「问答/检索/下载/权限变更」审计日志 | `feature/kb-audit-log` | 规划中 |
+
+### 3️⃣ 知识查询权限设置（`feature/kb-permission`）
+
+- **目标**：实现「部门 — 角色 — 知识域/文档 — 操作」四层授权。
+- **现状差距**：开源版具备「角色 × 数据集 × 操作」三层（`api/services/enterprise/rbac_service.py`、`api/core/rbac/entities.py`），`RBACResourceType` 目前仅 `app`、`dataset`，数据集 ACL 权限点完整（`dataset_preview / readonly / edit / retrieval_recall / use / document_download / delete_file / delete / access_config / api_key_manage` 等）。
+- **待补充**：
+  - 「部门」维度（组织架构/部门树作为权限主体，目前 `department/team` 仅是文档元数据字段）。
+  - 「知识域/文档」级资源粒度（目前只能整库授权）。
+
+### 4️⃣ 知识库使用情况统计（`feature/kb-statistics`）
+
+- **目标**：提供接口调用使用量、知识库调用情况等聚合统计报表。
+- **现状差距**：无专项报表/接口；仅有 `DocumentSegment.hit_count`（`api/services/dataset_service.py`）、`hit_testing` 检索试运行及应用侧 `metadata.usage` 等底层数据可支撑。
+- **待补充**：基于 `hit_count`、检索日志等实现「知识库调用量/使用情况」聚合统计与接口。
+
+### 5️⃣ 日志（Log）功能（`feature/kb-audit-log`）
+
+- **目标**：提供问答、检索、下载、权限变更、系统运行的**知识库审计日志**查询。
+- **现状差距**：仅有应用（App）级日志（对话/消息/工作流）；`operation_service.py` 仅做 UTM 计费上报，非审计日志。
+- **待补充**：新增知识库操作审计日志（检索/下载/权限变更等）及查询接口。
+
+### 分支结构
+
+```text
+main                        # 主干，跟随上游源库同步
+├── feature/kb-permission   # 3️⃣ 知识查询权限设置
+├── feature/kb-statistics   # 4️⃣ 知识库使用情况统计
+└── feature/kb-audit-log    # 5️⃣ 日志（审计）
+```
+
+### 同步上游
+
+```bash
+git fetch upstream
+git merge upstream/main
+```
+
+---
+
+*以下为上游 `langgenius/dify` 官方 README。*
+</details>
+
 <p align="center">
   <a href="https://cloud.dify.ai">Dify Cloud</a> ·
   <a href="https://docs.dify.ai/getting-started/install-self-hosted">Self-hosting</a> ·
