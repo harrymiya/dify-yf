@@ -40,6 +40,7 @@ from .comment import (
 )
 from .credential_permission import CredentialPermission
 from .credential_permission import CredentialType as CredentialPermissionType
+from .graph import GraphEntity, GraphRelation
 from .custom_role import Role, UserRole
 from .department import Department, DepartmentMember
 from .kb_permission import (
