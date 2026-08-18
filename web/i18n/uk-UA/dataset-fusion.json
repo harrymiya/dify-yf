@@ -1,0 +1,21 @@
+{
+  "title": "Unified Assistant Search",
+  "desc": "Search across every knowledge base you can access in one place. Results are fused and deduplicated across sources.",
+  "inputLabel": "Search query",
+  "searchPlaceholder": "Ask a question or enter keywords...",
+  "searchButton": "Search",
+  "loading": "Searching your knowledge bases...",
+  "noQuery": "Enter a query to search across your knowledge bases.",
+  "noResults": "No matching results found.",
+  "searchError": "Search failed. Please try again.",
+  "retry": "Retry",
+  "resultCount": "{{count}} results across {{datasets}} knowledge bases",
+  "sourceLabel": "Source",
+  "score": "Score",
+  "unknownTitle": "Untitled",
+  "strategy": "Fusion strategy",
+  "strategyRRF": "Reciprocal Rank Fusion",
+  "strategyMax": "Maximum score",
+  "strategySum": "Sum of scores",
+  "noAccess": "You do not have permission to retrieve from any knowledge base in this workspace."
+}

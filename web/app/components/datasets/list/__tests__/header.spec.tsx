@@ -3,6 +3,11 @@ import userEvent from '@testing-library/user-event'
 import { STEP_BY_STEP_TOUR_TARGETS } from '@/app/components/step-by-step-tour/target-registry'
 import DatasetListHeader from '../header'
 
+const mockPush = vi.fn()
+vi.mock('@/next/navigation', () => ({
+  useRouter: () => ({ push: mockPush }),
+}))
+
 vi.mock('@/features/tag-management/components/tag-filter', () => ({
   TagFilter: () => <div />,
 }))
@@ -133,5 +138,41 @@ describe('DatasetListHeader', () => {
     )
 
     expect(defaultProps.onCreateDataset).not.toHaveBeenCalled()
+  })
+
+  it('navigates to the knowledge access settings page', async () => {
+    const user = userEvent.setup()
+    render(<DatasetListHeader {...defaultProps} />)
+
+    await user.click(screen.getByTestId('go-kb-permissions'))
+
+    expect(mockPush).toHaveBeenCalledWith('/datasets/permissions')
+  })
+
+  it('navigates to the audit logs page', async () => {
+    const user = userEvent.setup()
+    render(<DatasetListHeader {...defaultProps} />)
+
+    await user.click(screen.getByTestId('go-audit-logs'))
+
+    expect(mockPush).toHaveBeenCalledWith('/datasets/audit-logs')
+  })
+
+  it('navigates to the usage statistics page', async () => {
+    const user = userEvent.setup()
+    render(<DatasetListHeader {...defaultProps} />)
+
+    await user.click(screen.getByTestId('go-statistics'))
+
+    expect(mockPush).toHaveBeenCalledWith('/datasets/statistics')
+  })
+
+  it('navigates to the unified assistant search page', async () => {
+    const user = userEvent.setup()
+    render(<DatasetListHeader {...defaultProps} />)
+
+    await user.click(screen.getByTestId('go-unified'))
+
+    expect(mockPush).toHaveBeenCalledWith('/datasets/unified')
   })
 })
