@@ -36,6 +36,9 @@ from models.dataset import (
 from models.dataset import Document as DatasetDocument
 from models.model import UploadFile
 from services.external_knowledge_service import ExternalDatasetService
+from services.kb_permission_service import KBPermissionService
+
+from models.kb_permission import KBPermissionAction, KBResourceType
 
 
 class SegmentAttachmentResult(TypedDict):
@@ -106,12 +109,28 @@ class RetrievalService:
         weights: WeightsDict | None = None,
         document_ids_filter: list[str] | None = None,
         attachment_ids: list[str] | None = None,
+        kb_permission_account: Any | None = None,
     ):
         if not query and not attachment_ids:
             return []
         dataset = cls._get_dataset(dataset_id)
         if not dataset:
             return []
+
+        # Security baseline (requirement 3): when an interactive account context
+        # is provided, enforce retrieval permission at the retrieval layer so
+        # service-direct callers cannot bypass controller-level checks. Owners are
+        # always allowed. Runtime app/workflow retrieval passes no account and is
+        # therefore unaffected (enforced at app-config level).
+        if kb_permission_account is not None:
+            KBPermissionService.require_permission(
+                kb_permission_account,
+                resource_type=KBResourceType.DATASET,
+                resource_id=dataset_id,
+                action=KBPermissionAction.DATASET_RETRIEVAL_RECALL.value,
+                session=db.session,
+                message="You do not have permission to retrieve from this knowledge base.",
+            )
 
         all_documents: list[Document] = []
         exceptions: list[str] = []

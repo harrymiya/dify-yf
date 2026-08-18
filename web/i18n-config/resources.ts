@@ -1,6 +1,7 @@
 import type agentV2 from '../i18n/en-US/agent-v-2.json'
 import type appAnnotation from '../i18n/en-US/app-annotation.json'
 import type appApi from '../i18n/en-US/app-api.json'
+import type auditLogs from '../i18n/en-US/audit-logs.json'
 import type appDebug from '../i18n/en-US/app-debug.json'
 import type appLog from '../i18n/en-US/app-log.json'
 import type appOverview from '../i18n/en-US/app-overview.json'
@@ -10,8 +11,10 @@ import type common from '../i18n/en-US/common.json'
 import type custom from '../i18n/en-US/custom.json'
 import type datasetCreation from '../i18n/en-US/dataset-creation.json'
 import type datasetDocuments from '../i18n/en-US/dataset-documents.json'
+import type datasetFusion from '../i18n/en-US/dataset-fusion.json'
 import type datasetHitTesting from '../i18n/en-US/dataset-hit-testing.json'
 import type datasetPipeline from '../i18n/en-US/dataset-pipeline.json'
+import type datasetPermission from '../i18n/en-US/dataset-permission.json'
 import type datasetSettings from '../i18n/en-US/dataset-settings.json'
 import type dataset from '../i18n/en-US/dataset.json'
 import type deployments from '../i18n/en-US/deployments.json'
@@ -33,6 +36,7 @@ import type share from '../i18n/en-US/share.json'
 import type snippet from '../i18n/en-US/snippet.json'
 import type time from '../i18n/en-US/time.json'
 import type tools from '../i18n/en-US/tools.json'
+import type usageStatistics from '../i18n/en-US/usage-statistics.json'
 import type workflow from '../i18n/en-US/workflow.json'
 import { kebabCase } from 'string-ts'
 
@@ -40,6 +44,7 @@ type RawResources = {
   app: typeof app
   appAnnotation: typeof appAnnotation
   appApi: typeof appApi
+  auditLogs: typeof auditLogs
   appDebug: typeof appDebug
   appLog: typeof appLog
   appOverview: typeof appOverview
@@ -50,8 +55,10 @@ type RawResources = {
   dataset: typeof dataset
   datasetCreation: typeof datasetCreation
   datasetDocuments: typeof datasetDocuments
+  datasetFusion: typeof datasetFusion
   datasetHitTesting: typeof datasetHitTesting
   datasetPipeline: typeof datasetPipeline
+  datasetPermission: typeof datasetPermission
   datasetSettings: typeof datasetSettings
   deployments: typeof deployments
   deviceFlow: typeof deviceFlow
@@ -72,6 +79,7 @@ type RawResources = {
   snippet: typeof snippet
   time: typeof time
   tools: typeof tools
+  usageStatistics: typeof usageStatistics
   workflow: typeof workflow
 }
 
@@ -141,6 +149,7 @@ export const namespaces = [
   'app',
   'appAnnotation',
   'appApi',
+  'auditLogs',
   'appDebug',
   'appLog',
   'appOverview',
@@ -151,8 +160,10 @@ export const namespaces = [
   'dataset',
   'datasetCreation',
   'datasetDocuments',
+  'datasetFusion',
   'datasetHitTesting',
   'datasetPipeline',
+  'datasetPermission',
   'datasetSettings',
   'deployments',
   'deviceFlow',
@@ -173,6 +184,7 @@ export const namespaces = [
   'snippet',
   'time',
   'tools',
+  'usageStatistics',
   'workflow',
 ] as const satisfies ReadonlyArray<keyof Resources>
 export type Namespace = (typeof namespaces)[number]

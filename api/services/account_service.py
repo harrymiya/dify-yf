@@ -1308,6 +1308,19 @@ class TenantService:
 
         CreditPoolService.create_default_pool(tenant.id, session=session)
 
+        # A3: initialize a default root department for the new tenant so the
+        # four-layer authorization org tree is never empty on first use.
+        from services.department_service import DepartmentService
+
+        DepartmentService.create_department(
+            tenant_id=tenant.id,
+            name="全公司",
+            parent_id=None,
+            sort=0,
+            session=session,
+        )
+        session.commit()
+
         return tenant
 
     @staticmethod

@@ -1,0 +1,21 @@
+{
+  "title": "统一助手搜索",
+  "desc": "在一个入口检索你可访问的所有知识库，结果跨来源融合并去重。",
+  "inputLabel": "搜索问题",
+  "searchPlaceholder": "输入问题或关键词...",
+  "searchButton": "搜索",
+  "loading": "正在检索你的知识库...",
+  "noQuery": "请输入问题以在所有知识库中检索。",
+  "noResults": "未找到匹配结果。",
+  "searchError": "搜索失败，请重试。",
+  "retry": "重试",
+  "resultCount": "在 {{datasets}} 个知识库中找到 {{count}} 条结果",
+  "sourceLabel": "来源",
+  "score": "相关度",
+  "unknownTitle": "未命名",
+  "strategy": "融合策略",
+  "strategyRRF": "倒数排名融合",
+  "strategyMax": "取最大分",
+  "strategySum": "分数求和",
+  "noAccess": "你没有权限检索当前工作区中的任何知识库。"
+}

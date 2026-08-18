@@ -1,3 +1,4 @@
+import io
 import json
 import logging
 from argparse import ArgumentTypeError
@@ -21,6 +22,7 @@ from controllers.common.controller_schemas import DocumentBatchDownloadZipPayloa
 from controllers.common.fields import SimpleResultMessageResponse, SimpleResultResponse, UrlResponse
 from controllers.common.schema import register_response_schema_models, register_schema_models
 from controllers.common.session import with_session
+from controllers.common.kb_wraps import kb_permission_required
 from controllers.console import console_ns
 from controllers.console.wraps import RBACPermission, RBACResourceScope, model_validate, rbac_permission_required
 from core.entities.knowledge_entities import IndexingEstimate
@@ -37,6 +39,7 @@ from core.rag.entities import Rule
 from core.rag.extractor.entity.datasource_type import DatasourceType
 from core.rag.extractor.entity.extract_setting import ExtractSetting, NotionInfo, WebsiteInfo
 from core.rag.index_processor.constant.index_type import IndexTechniqueType
+from extensions.ext_storage import storage
 from fields.base import ResponseModel
 from fields.document_fields import (
     DocumentMetadataResponse,
@@ -55,8 +58,11 @@ from libs.helper import dump_response, to_timestamp
 from libs.login import login_required
 from libs.pagination import paginate_query
 from models import Account, Document, DocumentSegment, UploadFile
+from models.audit_log import AuditLogStatus, AuditLogType
 from models.dataset import DatasetPermissionEnum, DocumentPipelineExecutionLog
 from models.enums import IndexingStatus, ProcessRuleMode, SegmentStatus
+from models.kb_permission import KBPermissionAction, KBResourceType
+from services.audit_log_service import AuditLogService
 from services.dataset_ref_service import DatasetRefService
 from services.dataset_service import DatasetService, DocumentService
 from services.enterprise import rbac_service as enterprise_rbac_service
@@ -1060,6 +1066,7 @@ class DocumentApi(DocumentResource):
     @account_initialization_required
     @with_current_user
     @with_current_tenant_id
+    @kb_permission_required(KBResourceType.DOCUMENT, KBPermissionAction.DOCUMENT_READ)
     @rbac_permission_required(RBACResourceScope.DATASET, RBACPermission.DATASET_CREATE_AND_MANAGEMENT)
     @with_session(write=False)
     def get(self, session: Session, current_tenant_id: str, current_user: Account, dataset_id: UUID, document_id: UUID):
@@ -1131,6 +1138,7 @@ class DocumentApi(DocumentResource):
     @console_ns.response(204, "Document deleted successfully")
     @with_current_user
     @with_current_tenant_id
+    @kb_permission_required(KBResourceType.DOCUMENT, KBPermissionAction.DOCUMENT_DELETE)
     @rbac_permission_required(RBACResourceScope.DATASET, RBACPermission.DATASET_EDIT)
     @with_session
     def delete(
@@ -1167,6 +1175,7 @@ class DocumentDownloadApi(DocumentResource):
     @cloud_edition_billing_rate_limit_check("knowledge")
     @with_current_user
     @with_current_tenant_id
+    @kb_permission_required(KBResourceType.DOCUMENT, KBPermissionAction.DOCUMENT_DOWNLOAD)
     @rbac_permission_required(RBACResourceScope.DATASET, RBACPermission.DATASET_DOCUMENT_DOWNLOAD)
     @with_session(write=False)
     def get(
@@ -1174,7 +1183,72 @@ class DocumentDownloadApi(DocumentResource):
     ) -> dict[str, Any]:
         # Reuse the shared permission/tenant checks implemented in DocumentResource.
         document = self.get_document(session, str(dataset_id), str(document_id), current_user, current_tenant_id)
+        AuditLogService.record(
+            tenant_id=current_tenant_id,
+            log_type=AuditLogType.DOWNLOAD,
+            action="document.download_url",
+            session=session,
+            user_id=current_user.id,
+            user_type="account",
+            status=AuditLogStatus.SUCCESS,
+            resource_type="document",
+            resource_id=str(document_id),
+            detail={"dataset_id": str(dataset_id), "document_name": str(document.name)},
+        )
+        session.commit()
         return UrlResponse(url=DocumentService.get_document_download_url(document, session)).model_dump(mode="json")
+
+
+@console_ns.route("/datasets/<uuid:dataset_id>/documents/<uuid:document_id>/download-file")
+class DocumentDownloadStreamApi(DocumentResource):
+    """Stream the original uploaded file binary directly (D2, requirement 2).
+
+    Enforces the four-layer KB permission (DOCUMENT_DOWNLOAD plus the owning
+    dataset's DATASET_USE) at stream time, then forwards the raw bytes from the
+    object storage backend via :func:`storage.load` + :func:`send_file`.
+    """
+
+    @console_ns.doc("download_dataset_document_file_stream")
+    @console_ns.doc(description="Stream a dataset document's original uploaded file binary with permission check")
+    @setup_required
+    @login_required
+    @account_initialization_required
+    @cloud_edition_billing_rate_limit_check("knowledge")
+    @with_current_user
+    @with_current_tenant_id
+    @kb_permission_required(KBResourceType.DOCUMENT, KBPermissionAction.DOCUMENT_DOWNLOAD)
+    @rbac_permission_required(RBACResourceScope.DATASET, RBACPermission.DATASET_DOCUMENT_DOWNLOAD)
+    @with_session(write=False)
+    def get(
+        self, session: Session, current_tenant_id: str, current_user: Account, dataset_id: UUID, document_id: UUID
+    ):
+        document = self.get_document(session, str(dataset_id), str(document_id), current_user, current_tenant_id)
+        upload_file = DocumentService._get_upload_file_for_upload_file_document(document, session)
+        binary = storage.load(upload_file.key)
+        # Use the original uploaded file name (the Dify `document.name` is the internal
+        # knowledge name, not necessarily the original file name).
+        download_name = upload_file.name or str(document.name or upload_file.id)
+        AuditLogService.record(
+            tenant_id=current_tenant_id,
+            log_type=AuditLogType.DOWNLOAD,
+            action="document.download_file",
+            session=session,
+            user_id=current_user.id,
+            user_type="account",
+            status=AuditLogStatus.SUCCESS,
+            resource_type="document",
+            resource_id=str(document_id),
+            detail={"dataset_id": str(dataset_id), "file_name": str(download_name)},
+        )
+        session.commit()
+        response = send_file(
+            io.BytesIO(binary),
+            mimetype=upload_file.mime_type or "application/octet-stream",
+            as_attachment=True,
+            download_name=download_name,
+        )
+        # response-contract:ignore binary stream download response
+        return response
 
 
 @console_ns.route("/datasets/<uuid:dataset_id>/documents/download-zip")
@@ -1191,6 +1265,7 @@ class DocumentBatchDownloadZipApi(DocumentResource):
     @console_ns.expect(console_ns.models[DocumentBatchDownloadZipPayload.__name__])
     @with_current_user
     @with_current_tenant_id
+    @kb_permission_required(KBResourceType.DATASET, KBPermissionAction.DATASET_DOCUMENT_DOWNLOAD)
     @rbac_permission_required(RBACResourceScope.DATASET, RBACPermission.DATASET_EDIT)
     @with_session(write=False)
     def post(self, session: Session, current_tenant_id: str, current_user: Account, dataset_id: UUID):
@@ -1219,6 +1294,19 @@ class DocumentBatchDownloadZipApi(DocumentResource):
             )
             cleanup = stack.pop_all()
             response.call_on_close(cleanup.close)
+        AuditLogService.record(
+            tenant_id=current_tenant_id,
+            log_type=AuditLogType.DOWNLOAD,
+            action="document.download_zip",
+            session=session,
+            user_id=current_user.id,
+            user_type="account",
+            status=AuditLogStatus.SUCCESS,
+            resource_type="dataset",
+            resource_id=str(dataset_id),
+            detail={"document_ids": document_ids, "file_name": str(download_name)},
+        )
+        session.commit()
         # response-contract:ignore binary ZIP download response
         return response
 
@@ -1300,6 +1388,7 @@ class DocumentMetadataApi(DocumentResource):
     @account_initialization_required
     @with_current_user
     @with_current_tenant_id
+    @kb_permission_required(KBResourceType.DOCUMENT, KBPermissionAction.DOCUMENT_EDIT)
     @rbac_permission_required(RBACResourceScope.DATASET, RBACPermission.DATASET_EDIT)
     @with_session
     @model_validate(DocumentMetadataUpdatePayload)
@@ -1405,6 +1494,7 @@ class DocumentPauseApi(DocumentResource):
     @console_ns.response(204, "Document paused successfully")
     @with_current_user
     @with_current_tenant_id
+    @kb_permission_required(KBResourceType.DOCUMENT, KBPermissionAction.DOCUMENT_EDIT)
     @rbac_permission_required(RBACResourceScope.DATASET, RBACPermission.DATASET_EDIT)
     @with_session
     def patch(
@@ -1445,6 +1535,7 @@ class DocumentRecoverApi(DocumentResource):
     @console_ns.response(204, "Document resumed successfully")
     @with_current_user
     @with_current_tenant_id
+    @kb_permission_required(KBResourceType.DOCUMENT, KBPermissionAction.DOCUMENT_EDIT)
     @rbac_permission_required(RBACResourceScope.DATASET, RBACPermission.DATASET_EDIT)
     @with_session
     def patch(
@@ -1550,6 +1641,7 @@ class DocumentRenameApi(DocumentResource):
     @console_ns.response(200, "Document renamed successfully", console_ns.models[DocumentResponse.__name__])
     @console_ns.expect(console_ns.models[DocumentRenamePayload.__name__])
     @with_current_user
+    @kb_permission_required(KBResourceType.DOCUMENT, KBPermissionAction.DOCUMENT_EDIT)
     @rbac_permission_required(RBACResourceScope.DATASET, RBACPermission.DATASET_EDIT)
     @with_session
     @model_validate(DocumentRenamePayload)

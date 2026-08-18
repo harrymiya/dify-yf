@@ -15,6 +15,7 @@ from configs import dify_config
 from controllers.common.fields import ApiBaseUrlResponse, SimpleResultResponse, UsageCheckResponse
 from controllers.common.schema import query_params_from_model, register_response_schema_models, register_schema_models
 from controllers.common.session import with_session
+from controllers.common.kb_wraps import kb_permission_required
 from controllers.console import console_ns
 from controllers.console.apikey import ApiKeyItem, ApiKeyList
 from controllers.console.app.error import ProviderNotInitializeError
@@ -50,6 +51,7 @@ from libs.url_utils import normalize_api_base_url
 from models import Account, ApiToken, App, Dataset, Document, DocumentSegment, UploadFile
 from models.dataset import DatasetPermission, DatasetPermissionEnum, DatasetQuery
 from models.enums import ApiTokenType, SegmentStatus
+from models.kb_permission import KBPermissionAction, KBResourceType
 from models.provider_ids import ModelProviderID
 from services.api_token_service import ApiTokenCache
 from services.app_service import AppService
@@ -659,6 +661,7 @@ class DatasetApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @kb_permission_required(KBResourceType.DATASET, KBPermissionAction.DATASET_PREVIEW)
     @rbac_permission_required(RBACResourceScope.DATASET, RBACPermission.DATASET_READONLY)
     @with_current_user
     @with_current_tenant_id
@@ -726,6 +729,7 @@ class DatasetApi(Resource):
     @cloud_edition_billing_rate_limit_check("knowledge")
     @with_current_user
     @with_current_tenant_id
+    @kb_permission_required(KBResourceType.DATASET, KBPermissionAction.DATASET_EDIT)
     @rbac_permission_required(RBACResourceScope.DATASET, RBACPermission.DATASET_EDIT)
     @with_session
     @model_validate(DatasetUpdatePayload)
@@ -793,6 +797,7 @@ class DatasetApi(Resource):
     @cloud_edition_billing_rate_limit_check("knowledge")
     @console_ns.response(204, "Dataset deleted successfully")
     @with_current_user
+    @kb_permission_required(KBResourceType.DATASET, KBPermissionAction.DATASET_DELETE)
     @rbac_permission_required(RBACResourceScope.DATASET, RBACPermission.DATASET_EDIT)
     @with_session
     def delete(self, session: Session, current_user: Account, dataset_id: UUID):

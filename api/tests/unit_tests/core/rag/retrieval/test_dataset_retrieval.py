@@ -37,6 +37,7 @@ from core.workflow.nodes.knowledge_retrieval import exc
 from core.workflow.nodes.knowledge_retrieval.retrieval import KnowledgeRetrievalRequest
 from graphon.model_runtime.entities.llm_entities import LLMUsage
 from graphon.model_runtime.entities.model_entities import ModelFeature
+from models.audit_log import AuditLogType
 from models.dataset import Dataset
 from models.enums import CreatorUserRole
 
@@ -4151,6 +4152,65 @@ class TestDatasetRetrievalAdditionalHelpers:
 
             assert len(added_queries) == 1
             assert added_queries[0].created_by_role == CreatorUserRole.END_USER
+
+    def test_on_query_records_qna_audit_row(self, retrieval: DatasetRetrieval) -> None:
+        """D5 wiring: every runtime retrieval also writes a QNA audit row."""
+        db_mock = Mock()
+        audit_session = MagicMock()
+        # tenant lookup returns "tenant-1"
+        audit_session.scalar.return_value = "tenant-1"
+        session_factory = MagicMock()
+        session_factory.begin.return_value.__enter__.return_value = audit_session
+
+        with (
+            patch("core.rag.retrieval.dataset_retrieval.db", db_mock),
+            patch(
+                "core.rag.retrieval.dataset_retrieval.sessionmaker", return_value=session_factory
+            ) as sessionmaker_mock,
+        ):
+            retrieval._on_query(
+                query="what is graph rag",
+                attachment_ids=None,
+                dataset_ids=["d1", "d2"],
+                app_id="a1",
+                user_from="end-user",
+                user_id="u1",
+            )
+
+            # qna audit row was added via session.add (not add_all).
+            added_audit = audit_session.add.call_args.args[0]
+            assert added_audit.log_type == AuditLogType.QNA
+            assert added_audit.action == "app.retrieval"
+            assert added_audit.tenant_id == "tenant-1"
+            assert added_audit.resource_type == "app"
+            assert added_audit.resource_id == "a1"
+            assert added_audit.user_type == CreatorUserRole.END_USER.value
+            assert added_audit.detail["dataset_ids"] == ["d1", "d2"]
+
+            sessionmaker_mock.assert_called_once_with(bind=db_mock.engine, expire_on_commit=False)
+
+    def test_on_query_skips_audit_when_no_tenant(self, retrieval: DatasetRetrieval) -> None:
+        """When the tenant cannot be resolved, no qna audit is written."""
+        db_mock = Mock()
+        audit_session = MagicMock()
+        audit_session.scalar.return_value = None  # dataset not found -> no tenant
+        session_factory = MagicMock()
+        session_factory.begin.return_value.__enter__.return_value = audit_session
+
+        with (
+            patch("core.rag.retrieval.dataset_retrieval.db", db_mock),
+            patch("core.rag.retrieval.dataset_retrieval.sessionmaker", return_value=session_factory),
+        ):
+            retrieval._on_query(
+                query="hello",
+                attachment_ids=None,
+                dataset_ids=["d1"],
+                app_id="a1",
+                user_from="account",
+                user_id="u1",
+            )
+            audit_session.add.assert_not_called()
+            audit_session.add_all.assert_called_once()
 
     def test_handle_invoke_result(self, retrieval: DatasetRetrieval) -> None:
         usage = LLMUsage.empty_usage()

@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@langgenius/dify-ui/dropdown-menu'
 import { useTranslation } from 'react-i18next'
+import { useRouter } from '@/next/navigation'
 import { SearchInput } from '@/app/components/base/search-input'
 import CheckboxWithLabel from '@/app/components/datasets/create/website/base/checkbox-with-label'
 import {
@@ -64,6 +65,7 @@ const DatasetListHeader = ({
   knowledgeViewSwitcherProps,
 }: Props) => {
   const { t } = useTranslation()
+  const router = useRouter()
   const showCreateMenu = canCreateDataset || canConnectExternalDataset
   const createMenu = useStepByStepTourControlledDropdown({
     controlledOpen: stepByStepTourCreateMenuOpen,
@@ -95,6 +97,54 @@ const DatasetListHeader = ({
               </span>
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="small"
+            className="overflow-hidden text-text-tertiary"
+            onClick={() => router.push('/datasets/permissions')}
+            data-testid="go-kb-permissions"
+          >
+            <span aria-hidden className="i-ri-lock-2-line size-3.5 shrink-0" />
+            <span className="system-xs-medium">
+              {t(($) => $.title, { ns: 'datasetPermission' })}
+            </span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="small"
+            className="overflow-hidden text-text-tertiary"
+            onClick={() => router.push('/datasets/audit-logs')}
+            data-testid="go-audit-logs"
+          >
+            <span aria-hidden className="i-ri-file-list-2-line size-3.5 shrink-0" />
+            <span className="system-xs-medium">
+              {t(($) => $.title, { ns: 'auditLogs' })}
+            </span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="small"
+            className="overflow-hidden text-text-tertiary"
+            onClick={() => router.push('/datasets/statistics')}
+            data-testid="go-statistics"
+          >
+            <span aria-hidden className="i-ri-bar-chart-2-line size-3.5 shrink-0" />
+            <span className="system-xs-medium">
+              {t(($) => $.title, { ns: 'usageStatistics' })}
+            </span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="small"
+            className="overflow-hidden text-text-tertiary"
+            onClick={() => router.push('/datasets/unified')}
+            data-testid="go-unified"
+          >
+            <span aria-hidden className="i-ri-search-line size-3.5 shrink-0" />
+            <span className="system-xs-medium">
+              {t(($) => $.title, { ns: 'datasetFusion' })}
+            </span>
+          </Button>
           <ServiceApi apiBaseUrl={apiBaseUrl} />
         </div>
       </div>

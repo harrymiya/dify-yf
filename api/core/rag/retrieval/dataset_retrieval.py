@@ -75,6 +75,7 @@ from graphon.model_runtime.model_providers.base.large_language_model import Larg
 from libs.helper import parse_uuid_str_or_none
 from libs.json_in_md_parser import parse_and_check_json_markdown
 from models import UploadFile
+from models.audit_log import AuditLogStatus, AuditLogType
 from models.dataset import (
     ChildChunk,
     Dataset,
@@ -87,6 +88,7 @@ from models.dataset import (
 from models.dataset import Document as DatasetDocument
 from models.dataset import Document as DocumentModel
 from models.enums import CreatorUserRole, DatasetQuerySource
+from services.audit_log_service import AuditLogService
 from services.external_knowledge_service import ExternalDatasetService
 from services.feature_service import FeatureService
 
@@ -1087,6 +1089,32 @@ class DatasetRetrieval:
 
         with sessionmaker(bind=db.engine, expire_on_commit=False).begin() as session:
             session.add_all(dataset_queries)
+            # Q&A / retrieval audit (requirement 5): one qna row per retrieval
+            # request, keyed by app and the set of datasets actually queried.
+            # tenant is derived from the first queried dataset.
+            tenant_id = None
+            first_ds = session.scalar(select(Dataset.tenant_id).where(Dataset.id == dataset_ids[0]))
+            if first_ds:
+                tenant_id = str(first_ds)
+            if tenant_id:
+                session.add(
+                    AuditLogService.record(
+                        tenant_id=tenant_id,
+                        log_type=AuditLogType.QNA,
+                        action="app.retrieval",
+                        session=session,
+                        user_id=created_by,
+                        user_type=created_by_role.value if created_by_role else None,
+                        status=AuditLogStatus.SUCCESS,
+                        resource_type="app",
+                        resource_id=app_id,
+                        detail={
+                            "dataset_ids": dataset_ids,
+                            "source": DatasetQuerySource.APP.value,
+                            "query": (query or "")[:200],
+                        },
+                    )
+                )
 
     def _retriever(
         self,
