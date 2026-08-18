@@ -34,10 +34,12 @@ for module_name in RESOURCE_MODULES:
 # Import other controllers
 from . import (
     apikey,
+    departments,
     extension,
     feature,
     human_input_form,
     init_validate,
+    kb_access_policies,
     knowledge_fs_proxy,
     notification,
     onboarding,

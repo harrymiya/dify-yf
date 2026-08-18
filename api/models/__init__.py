@@ -40,6 +40,14 @@ from .comment import (
 )
 from .credential_permission import CredentialPermission
 from .credential_permission import CredentialType as CredentialPermissionType
+from .custom_role import Role, UserRole
+from .department import Department, DepartmentMember
+from .kb_permission import (
+    KBPermissionAction,
+    KBPermissionGrant,
+    KBResourceType,
+    KBSubjectType,
+)
 from .dataset import (
     AppDatasetJoin,
     Dataset,
@@ -215,6 +223,8 @@ __all__ = [
     "DatasetRetrieverResource",
     "DatasourceOauthParamConfig",
     "DatasourceProvider",
+    "Department",
+    "DepartmentMember",
     "DifySetup",
     "Document",
     "DocumentSegment",
@@ -231,6 +241,10 @@ __all__ = [
     "IconType",
     "InstalledApp",
     "InvitationCode",
+    "KBPermissionAction",
+    "KBPermissionGrant",
+    "KBResourceType",
+    "KBSubjectType",
     "LoadBalancingModelConfig",
     "Message",
     "MessageAgentThought",
@@ -249,6 +263,7 @@ __all__ = [
     "ProviderQuotaType",
     "ProviderType",
     "RecommendedApp",
+    "Role",
     "SavedMessage",
     "Site",
     "SnippetType",
@@ -272,6 +287,7 @@ __all__ = [
     "TriggerOAuthTenantClient",
     "TriggerSubscription",
     "UploadFile",
+    "UserRole",
     "Whitelist",
     "Workflow",
     "WorkflowAgentBindingType",
