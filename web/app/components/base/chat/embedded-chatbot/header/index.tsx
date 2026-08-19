@@ -105,7 +105,7 @@ const Header: FC<IHeaderProps> = ({
                     className="block h-5 w-auto"
                   />
                 ) : (
-                  <DifyLogo alt="Dify" size="small" />
+                  <DifyLogo alt="Dify" size="medium" />
                 )}
               </div>
             )}

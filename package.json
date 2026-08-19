@@ -5,7 +5,9 @@
   "scripts": {
     "check": "vp check && pnpm lint:eslint",
     "check:fix": "pnpm lint:eslint:fix && vp check --fix",
-    "dev": "concurrently -k -n vinext,proxy \"vp run dify-web#dev:vinext\" \"vp run dify-web#dev:proxy\"",
+    "dev": "bash ./dev/start-web.sh",
+    "py": "bash ./dev/start-backend.sh",
+    "dev:full": "concurrently -k -n vinext,proxy \"vp run dify-web#dev:vinext\" \"vp run dify-web#dev:proxy\"",
     "knip": "knip --workspace web",
     "knip:production": "knip --workspace web --production --include files",
     "knip:production-unused-check": "node ./scripts/check-web-production-unused-after-knip-fix.mjs",
