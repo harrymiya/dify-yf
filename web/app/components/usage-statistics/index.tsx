@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { KBPageLayout } from '@/app/components/datasets/kb-page-layout'
+import { fetchDatasets } from '@/service/datasets'
 import { fetchInterfaceCalls, fetchKBCallStats, fetchKBTrend } from './services'
 
 const DAY_OPTIONS = [7, 30, 90]
@@ -55,6 +56,15 @@ export default function UsageStatisticsPage() {
   const maxTrend = useMemo(
     () => Math.max(1, ...(trend?.data ?? []).map((point) => point.calls)),
     [trend],
+  )
+
+  const { data: datasetPage } = useQuery({
+    queryKey: ['usage-statistics', 'datasets'],
+    queryFn: () => fetchDatasets({ url: '/datasets', params: { limit: 100, page: 1 } }),
+  })
+  const datasetNameById = useMemo(
+    () => new Map((datasetPage?.data ?? []).map((d) => [d.id, d.name])),
+    [datasetPage],
   )
 
   return (
@@ -111,7 +121,7 @@ export default function UsageStatisticsPage() {
                 <li key={item.dataset_id} className="flex items-center gap-3 py-2">
                   <span className="w-5 shrink-0 text-xs text-text-tertiary">{index + 1}</span>
                   <span className="min-w-0 flex-1 truncate text-sm text-text-primary">
-                    {item.dataset_id}
+                    {datasetNameById.get(item.dataset_id) || '-'}
                   </span>
                   <span className="shrink-0 text-sm font-medium text-text-secondary">
                     {item.calls}

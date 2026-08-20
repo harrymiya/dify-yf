@@ -58,6 +58,9 @@ describe('UsageStatisticsPage', () => {
       'usage-statistics,kb-calls,7': { data: base.kb },
       'usage-statistics,kb-trend,7': { data: base.trend },
       'usage-statistics,interfaces,7': { data: base.iface },
+      'usage-statistics,datasets': {
+        data: { data: [{ id: 'ds-1', name: 'Demo KB' }, { id: 'ds-2', name: 'Second KB' }] },
+      },
     }
   })
 
@@ -70,7 +73,7 @@ describe('UsageStatisticsPage', () => {
 
   it('renders kb call rows', () => {
     render(<UsageStatisticsPage />)
-    expect(screen.getByText('ds-1')).toBeInTheDocument()
+    expect(screen.getByText('Demo KB')).toBeInTheDocument()
     expect(screen.getByText('10')).toBeInTheDocument()
   })
 
@@ -78,6 +81,6 @@ describe('UsageStatisticsPage', () => {
     render(<UsageStatisticsPage />)
     fireEvent.click(screen.getByTestId('days-7'))
     // state updated; assert the component still renders without crashing
-    expect(screen.getByText('ds-1')).toBeInTheDocument()
+    expect(screen.getByText('Demo KB')).toBeInTheDocument()
   })
 })
