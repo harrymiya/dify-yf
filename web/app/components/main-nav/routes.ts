@@ -106,6 +106,17 @@ export const MAIN_NAV_ROUTES = [
     visibility: VISIBLE_TO_ALL,
   },
   {
+    key: 'marketplace',
+    href: '/marketplace',
+    labelKey: 'mainNav.marketplace',
+    active: (path: string) =>
+      isPathUnderRoute(path, '/marketplace') || isPathUnderRoute(path, '/plugins'),
+    icon: 'i-custom-vender-main-nav-marketplace',
+    activeIcon: 'i-custom-vender-main-nav-marketplace-active',
+    visibility: VISIBLE_TO_ALL,
+    feature: 'marketplace',
+  },
+  {
     key: 'kb-permissions',
     href: '/kb-permissions',
     labelKey: 'mainNav.kbPermissions',
