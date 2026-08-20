@@ -16,13 +16,28 @@ vi.mock('../services', () => ({
   fetchAuditLogs: (...args: unknown[]) => h.mockFetch(...args),
 }))
 
+vi.mock('@/service/use-common', () => ({
+  useMembers: () => ({
+    data: {
+      accounts: [{ id: 'u-1', name: 'Alice', email: 'alice@example.com' }],
+    },
+  }),
+}))
+
 vi.mock('@tanstack/react-query', () => {
-  const useQuery = () => ({
-    isLoading: false,
-    isError: false,
-    refetch: vi.fn(),
-    ...h.queryResult,
-  })
+  const useQuery = ({ queryKey }: { queryKey: unknown }) => {
+    const key = Array.isArray(queryKey) ? queryKey.filter(Boolean).join(',') : String(queryKey)
+    if (key.includes('datasets'))
+      return {
+        data: { data: [{ id: 'ds-1', name: 'Demo KB' }] },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      }
+    if (key.includes('departments'))
+      return { data: [], isLoading: false, isError: false, refetch: vi.fn() }
+    return { isLoading: false, isError: false, refetch: vi.fn(), ...h.queryResult }
+  }
   return { useQuery }
 })
 
@@ -71,7 +86,8 @@ describe('AuditLogsPage', () => {
   it('renders the audit log table with rows', () => {
     render(<AuditLogsPage />)
     expect(screen.getByText('retrieve')).toBeInTheDocument()
-    expect(screen.getByText('ds-1')).toBeInTheDocument()
+    expect(screen.getByText('Demo KB')).toBeInTheDocument()
+    expect(screen.getByText('Alice')).toBeInTheDocument()
   })
 
   it('renders empty state when no logs', () => {

@@ -1,13 +1,49 @@
 'use client'
 
-import type { AuditLogType } from './types'
+import type { AuditLogItem, AuditLogType } from './types'
 import { Button } from '@langgenius/dify-ui/button'
 import { Input } from '@langgenius/dify-ui/input'
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { KBPageLayout } from '@/app/components/datasets/kb-page-layout'
+// oxlint-disable-next-line no-restricted-imports -- KB permission feature endpoints are not generated yet.
+import { fetchDepartmentTree } from '@/app/components/datasets/kb-permission/services'
+import { fetchDatasets } from '@/service/datasets'
+import { useMembers } from '@/service/use-common'
 import { fetchAuditLogs } from './services'
+
+const RESOURCE_LABEL_KEY: Record<string, string> = {
+  dataset: 'resourceDataset',
+  document: 'resourceDocument',
+  app: 'resourceApp',
+  department: 'resourceDepartment',
+  role: 'resourceRole',
+}
+
+const resourceLabel = (
+  row: AuditLogItem,
+  datasets: Array<{ id: string; name: string }>,
+  departmentById: Map<string, string>,
+  t: (key: string) => string,
+): string => {
+  const id = row.resource_id
+  if (!id) return '-'
+  switch (row.resource_type) {
+    case 'dataset':
+      return datasets.find((d) => d.id === id)?.name || t(RESOURCE_LABEL_KEY.dataset)
+    case 'department':
+      return departmentById.get(id) || t(RESOURCE_LABEL_KEY.department)
+    case 'document':
+      return t(RESOURCE_LABEL_KEY.document)
+    case 'app':
+      return t(RESOURCE_LABEL_KEY.app)
+    case 'role':
+      return t(RESOURCE_LABEL_KEY.role)
+    default:
+      return '-'
+  }
+}
 
 const TYPE_ORDER: AuditLogType[] = ['qna', 'retrieval', 'download', 'permission_change', 'system']
 
@@ -50,6 +86,37 @@ export default function AuditLogsPage() {
         page_size: pageSize,
       }),
   })
+
+  const { data: membersData } = useMembers()
+  const members = membersData?.accounts ?? []
+
+  const { data: datasetPage } = useQuery({
+    queryKey: ['audit-logs', 'datasets'],
+    queryFn: () => fetchDatasets({ url: '/datasets', params: { limit: 100, page: 1 } }),
+  })
+  const datasets = datasetPage?.data ?? []
+
+  const { data: departmentTree = [] } = useQuery({
+    queryKey: ['audit-logs', 'departments'],
+    queryFn: fetchDepartmentTree,
+  })
+
+  const departmentById = useMemo(() => {
+    const map = new Map<string, string>()
+    const walk = (nodes: Array<{ id: string; name: string; children?: unknown[] }>) => {
+      for (const n of nodes) {
+        map.set(n.id, n.name)
+        if (n.children?.length) walk(n.children as typeof nodes)
+      }
+    }
+    walk(departmentTree)
+    return map
+  }, [departmentTree])
+
+  const memberById = useMemo(
+    () => new Map(members.map((m) => [m.id, m])),
+    [members],
+  )
 
   const applyFilters = () => {
     setApplied({ logType, action, status, resourceId })
@@ -173,10 +240,16 @@ export default function AuditLogsPage() {
                       </span>
                     </td>
                     <td className="max-w-48 truncate bg-background-section-burn px-2 py-2 text-text-secondary">
-                      {row.user_type ? t(userTypeLabelKey(row.user_type)) : ''} {row.user_id ?? ''}
+                      {row.user_type === 'account' && row.user_id
+                        ? memberById.get(row.user_id)?.name ||
+                          memberById.get(row.user_id)?.email ||
+                          t(userTypeLabelKey('account'))
+                        : row.user_type
+                          ? t(userTypeLabelKey(row.user_type))
+                          : '-'}
                     </td>
                     <td className="max-w-48 truncate bg-background-section-burn px-2 py-2 text-text-tertiary">
-                      {row.resource_id ?? '-'}
+                      {resourceLabel(row, datasets, departmentById, t)}
                     </td>
                     <td className="rounded-r-lg bg-background-section-burn px-2 py-2 whitespace-nowrap text-text-tertiary">
                       {row.ip ?? '-'}
