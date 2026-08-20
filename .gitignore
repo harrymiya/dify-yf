@@ -268,3 +268,7 @@ web/.vitest-reports/
 # dify-agent-runtime
 dify-agent-runtime/bin/
 dify-agent-runtime/.integration-state
+
+# local plugin runtime artifacts
+api/plugin_daemon_local/
+api/plugin_storage_local/
