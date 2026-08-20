@@ -15,6 +15,25 @@ vi.mock('../services', () => ({
   fetchFusionRetrieve: (...args: unknown[]) => h.mockFetch(...args),
 }))
 
+vi.mock('@tanstack/react-query', () => {
+  const useQuery = ({ queryKey }: { queryKey: unknown }) => {
+    const key = Array.isArray(queryKey) ? queryKey.filter(Boolean).join(',') : String(queryKey)
+    if (key.includes('datasets'))
+      return {
+        data: {
+          data: [
+            { id: 'ds-1', name: 'First KB' },
+            { id: 'ds-2', name: 'Second KB' },
+          ],
+        },
+        isLoading: false,
+        isError: false,
+      }
+    return { data: undefined, isLoading: false, isError: false }
+  }
+  return { useQuery }
+})
+
 vi.mock('@langgenius/dify-ui/button', () => ({
   Button: ({ children, onClick, ...props }: ButtonProps) => (
     <button type="button" onClick={onClick} {...props}>
@@ -71,6 +90,8 @@ describe('KBFusionSearch', () => {
     fireEvent.click(screen.getByTestId('fusion-search-button'))
 
     expect(await screen.findByText('The hardest problem in computer science.')).toBeInTheDocument()
+    expect(screen.getByText(/First KB/)).toBeInTheDocument()
+    expect(screen.queryByText('ds-1')).not.toBeInTheDocument()
     expect(h.mockFetch).toHaveBeenCalledWith({
       query: 'cache invalidation',
       strategy: 'rrf',

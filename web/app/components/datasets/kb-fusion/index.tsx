@@ -3,9 +3,11 @@
 import type { FusionRecord, FusionStrategy } from './types'
 import { Button } from '@langgenius/dify-ui/button'
 import { Input } from '@langgenius/dify-ui/input'
-import { useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { KBPageLayout } from '../kb-page-layout'
+import { fetchDatasets } from '@/service/datasets'
 import { fetchFusionRetrieve } from './services'
 
 const STRATEGIES: FusionStrategy[] = ['rrf', 'max', 'sum']
@@ -52,6 +54,15 @@ export default function KBFusionSearch() {
 
   const records = result?.records ?? []
   const hasSearched = result !== null
+
+  const { data: datasetPage } = useQuery({
+    queryKey: ['kb-fusion', 'datasets'],
+    queryFn: () => fetchDatasets({ url: '/datasets', params: { limit: 100, page: 1 } }),
+  })
+  const datasetNameById = useMemo(
+    () => new Map((datasetPage?.data ?? []).map((d) => [d.id, d.name])),
+    [datasetPage],
+  )
 
   return (
     <KBPageLayout title={t('title')} description={t('desc')}>
@@ -133,7 +144,7 @@ export default function KBFusionSearch() {
                       {record.content}
                     </div>
                     <div className="mt-2 text-xs text-text-tertiary">
-                      {t('sourceLabel')}: {record.dataset_id}
+                      {t('sourceLabel')}: {datasetNameById.get(record.dataset_id) || '-'}
                     </div>
                   </article>
                 ))}
