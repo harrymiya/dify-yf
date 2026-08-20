@@ -30,12 +30,14 @@ from services.department_service import DepartmentService
 
 class DepartmentCreatePayload(BaseModel):
     name: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=255)
     parent_id: str | None = None
     sort: int = 0
 
 
 class DepartmentUpdatePayload(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=255)
     parent_id: str | None = None
     sort: int | None = None
 
@@ -74,6 +76,7 @@ class DepartmentListApi(Resource):
         department = DepartmentService.create_department(
             tenant_id=current_tenant_id,
             name=req_data.name,
+            description=req_data.description,
             parent_id=req_data.parent_id,
             sort=req_data.sort,
             session=session,
@@ -88,7 +91,7 @@ class DepartmentListApi(Resource):
             status=AuditLogStatus.SUCCESS,
             resource_type="department",
             resource_id=department.id,
-            detail={"name": req_data.name, "parent_id": req_data.parent_id},
+            detail={"name": req_data.name, "description": req_data.description, "parent_id": req_data.parent_id},
         )
         session.commit()
         return SimpleResultDataResponse(result="success", data=department.id).model_dump(mode="json"), 201
@@ -106,7 +109,13 @@ class DepartmentDetailApi(Resource):
         department = DepartmentService.get_department(str(department_id), current_tenant_id, session)
         if department is None:
             raise NotFound("department not found")
-        return {"id": department.id, "parent_id": department.parent_id, "name": department.name, "sort": department.sort}, 200
+        return {
+            "id": department.id,
+            "parent_id": department.parent_id,
+            "name": department.name,
+            "description": department.description,
+            "sort": department.sort,
+        }, 200
 
     @setup_required
     @login_required
@@ -126,7 +135,11 @@ class DepartmentDetailApi(Resource):
         ):
             raise BadRequest("cannot re-parent a department under itself or a descendant")
         DepartmentService.update_department(
-            department, name=req_data.name, parent_id=req_data.parent_id, sort=req_data.sort
+            department,
+            name=req_data.name,
+            description=req_data.description,
+            parent_id=req_data.parent_id,
+            sort=req_data.sort,
         )
         AuditLogService.record(
             tenant_id=current_tenant_id,
@@ -138,7 +151,12 @@ class DepartmentDetailApi(Resource):
             status=AuditLogStatus.SUCCESS,
             resource_type="department",
             resource_id=str(department_id),
-            detail={"name": req_data.name, "parent_id": req_data.parent_id, "sort": req_data.sort},
+            detail={
+                "name": req_data.name,
+                "description": req_data.description,
+                "parent_id": req_data.parent_id,
+                "sort": req_data.sort,
+            },
         )
         session.commit()
         return {"result": "success"}, 200

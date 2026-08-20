@@ -26,6 +26,7 @@ class Department(TypeBase):
     )
     tenant_id: Mapped[str] = mapped_column(StringUUID, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
     parent_id: Mapped[str | None] = mapped_column(StringUUID, nullable=True, default=None)
     sort: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"), default=0)
     created_at: Mapped[datetime] = mapped_column(

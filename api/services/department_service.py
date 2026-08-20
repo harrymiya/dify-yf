@@ -31,11 +31,18 @@ class DepartmentService:
 
     @staticmethod
     def create_department(
-        *, tenant_id: str, name: str, parent_id: str | None = None, sort: int = 0, session: Session
+        *,
+        tenant_id: str,
+        name: str,
+        description: str | None = None,
+        parent_id: str | None = None,
+        sort: int = 0,
+        session: Session,
     ) -> Department:
         department = Department(
             tenant_id=tenant_id,
             name=name,
+            description=description,
             parent_id=parent_id,
             sort=sort,
         )
@@ -45,10 +52,17 @@ class DepartmentService:
 
     @staticmethod
     def update_department(
-        department: Department, *, name: str | None = None, parent_id: str | None = None, sort: int | None = None
+        department: Department,
+        *,
+        name: str | None = None,
+        description: str | None = None,
+        parent_id: str | None = None,
+        sort: int | None = None,
     ) -> None:
         if name is not None:
             department.name = name
+        if description is not None:
+            department.description = description
         if parent_id is not None:
             department.parent_id = parent_id
         if sort is not None:
@@ -176,6 +190,7 @@ class DepartmentService:
                 "tenant_id": d.tenant_id,
                 "parent_id": d.parent_id,
                 "name": d.name,
+                "description": d.description,
                 "sort": d.sort,
                 "children": [],
             }
