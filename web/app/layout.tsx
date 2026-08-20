@@ -18,7 +18,6 @@ import { headers } from '@/next/headers'
 import { getApplicationTitle } from '@/utils/document-title'
 import { CloudAnalytics } from './components/base/analytics-consent/cloud-analytics'
 import { PartnerStackCookieRecorder } from './components/billing/partner-stack/cookie-recorder'
-import { AgentationLoader } from './components/devtools/agentation-loader'
 import { I18nServerProvider } from './components/provider/i18n-server'
 import { TanStackQueryProvider } from './query-provider'
 import './styles/globals.css'
@@ -95,7 +94,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </NuqsAdapter>
             </ThemeProvider>
           </JotaiProvider>
-          <AgentationLoader />
         </div>
       </body>
     </html>
