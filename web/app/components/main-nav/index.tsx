@@ -69,22 +69,22 @@ export function MainNav({ className }: MainNavProps) {
     const appTitle =
       systemFeatures.branding.enabled && systemFeatures.branding.application_title
         ? systemFeatures.branding.application_title
-        : 'Dify'
+        : '智能助手'
 
     return (
       <Link
         href="/"
-        className="flex h-8 shrink-0 items-center overflow-hidden focus-visible:ring-2 focus-visible:ring-state-accent-solid focus-visible:outline-hidden"
+        className="flex h-14 shrink-0 items-center overflow-hidden focus-visible:ring-2 focus-visible:ring-state-accent-solid focus-visible:outline-hidden"
         aria-label={appTitle}
       >
         {systemFeatures.branding.enabled && systemFeatures.branding.workspace_logo ? (
           <img
             src={systemFeatures.branding.workspace_logo}
-            className="block h-5.5 w-auto object-contain"
+            className="block h-13 w-auto object-contain"
             alt=""
           />
         ) : (
-          <DifyLogo alt="" />
+          <DifyLogo alt="" size="xl" />
         )}
       </Link>
     )

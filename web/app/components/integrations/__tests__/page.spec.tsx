@@ -380,7 +380,7 @@ describe('IntegrationsPage', () => {
   it('reconciles the route title with client branding', () => {
     renderIntegrationsPage(undefined, { section: 'provider', syncDocumentTitle: true })
 
-    expect(document.title).toBe('common.settings.provider · common.mainNav.integrations - Dify')
+    expect(document.title).toBe('common.settings.provider · common.mainNav.integrations - 智能助手')
   })
 
   it('renders the model provider section from the section query', () => {

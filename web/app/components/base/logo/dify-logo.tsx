@@ -12,6 +12,7 @@ const difyLogoVariants = cva(
         small: 'h-4 w-9',
         medium: 'h-5.5 w-12',
         large: 'h-7 w-16',
+        xl: 'h-14 w-36',
       },
     },
     defaultVariants: {

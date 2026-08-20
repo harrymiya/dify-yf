@@ -11,7 +11,7 @@ describe('useDocumentTitle', () => {
     renderHookWithConsoleQuery(() => useDocumentTitle('Settings'), {
       systemFeatures: { branding: { enabled: false } },
     })
-    expect(document.title).toBe('Settings - Dify')
+    expect(document.title).toBe('Settings - 智能助手')
   })
 
   it('uses the configured product name with or without a page title', () => {
