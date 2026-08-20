@@ -1344,7 +1344,7 @@
   "workflowGenerator.applyToCurrent": "適用於當前草案",
   "workflowGenerator.applyToNew": "創建新應用程式",
   "workflowGenerator.cancel": "取消",
-  "workflowGenerator.description": "描述您希望工作流程執行的操作。選擇模型、編寫指令並然後再將其套用到 工作室覽生成的圖形，单间公寓。",
+  "workflowGenerator.description": "描述您希望工作流程執行的操作。選擇模型、編寫指令並然後再將其套用到 工作空间覽生成的圖形，单间公寓。",
   "workflowGenerator.diff.summary": "新增 {{added}} · 刪除 {{removed}} · 變更 {{changed}}",
   "workflowGenerator.dismiss": "解僱",
   "workflowGenerator.errors.DANGLING_EDGE": "產生的工作流程有一條邊指向不存在的節點。再試一次或完善您的指示。",
