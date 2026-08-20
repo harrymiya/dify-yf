@@ -91,7 +91,7 @@ class DepartmentListApi(Resource):
             detail={"name": req_data.name, "parent_id": req_data.parent_id},
         )
         session.commit()
-        return SimpleResultDataResponse(data=department.id).model_dump(mode="json"), 201
+        return SimpleResultDataResponse(result="success", data=department.id).model_dump(mode="json"), 201
 
 
 @console_ns.route("/workspaces/current/departments/<uuid:department_id>")
