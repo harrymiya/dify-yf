@@ -16,6 +16,17 @@ fi
 
 echo "==> Starting Dify web dev server on :${PORT}..."
 cd "$WEB_DIR"
+
+# Sweep stale dev compilation output from previous runs. On modest hardware this
+# dir falls off quickly (4GB+ for Dify) and accumulating it across restarts can
+# fill the disk and degrade Turbopack startup. Dev mode recompiles on demand
+# anyway, so a cold-clean start costs little and buys predictable behavior.
+if [ -d ".next/dev" ]; then
+  DEV_DIR_SIZE="$(du -sh .next/dev 2>/dev/null | cut -f1)"
+  echo "==> Cleaning stale dev build output (.next/dev, ${DEV_DIR_SIZE:-?})..."
+  rm -rf .next/dev
+fi
+
 # Disable Turbopack disk-persistent cache. On modest hardware the on-disk cache
 # can balloon to tens of GB and trigger long DB compaction passes on cold start,
 # stalling HTTP responses for minutes. Keep caching in-memory only (dev is
