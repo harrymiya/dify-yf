@@ -21,12 +21,14 @@ export const fetchDepartmentTree = async (): Promise<DepartmentNode[]> => {
 
 export const createDepartment = async (payload: {
   name: string
+  description?: string
   parent_id?: string | null
   sort?: number
 }): Promise<string> => {
   const resp = await post<SimpleDataResponse>(DEPARTMENT_API, {
     body: {
       name: payload.name,
+      description: payload.description ?? undefined,
       parent_id: payload.parent_id ?? undefined,
       sort: payload.sort ?? 0,
     },
@@ -36,11 +38,12 @@ export const createDepartment = async (payload: {
 
 export const updateDepartment = async (
   departmentId: string,
-  payload: { name?: string; parent_id?: string | null; sort?: number },
+  payload: { name?: string; description?: string; parent_id?: string | null; sort?: number },
 ): Promise<void> => {
   await patch<SimpleResponse>(`${DEPARTMENT_API}/${departmentId}`, {
     body: {
       name: payload.name,
+      description: payload.description ?? undefined,
       parent_id:
         payload.parent_id === null || payload.parent_id === undefined
           ? undefined

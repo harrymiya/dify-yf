@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import GrantPanel from '../grant-panel'
 
 const h = vi.hoisted(() => {
@@ -91,6 +91,35 @@ describe('GrantPanel', () => {
     h.mockCreateGrant.mockResolvedValue({ created: 1, result: 'success' })
   })
 
+  it('maps every backend action value to a display key via the mapping enum', async () => {
+    const { backendActionToKey, KBActionEnum } = await import('../types')
+    for (const key of Object.keys(KBActionEnum) as Array<keyof typeof KBActionEnum>) {
+      expect(backendActionToKey(KBActionEnum[key])).toBe(key)
+    }
+    expect(backendActionToKey('unknown_action')).toBeUndefined()
+  })
+
+  it('displays existing grant actions using the mapping enum label key', () => {
+    h.queryStore['dataset-permission,grants,dataset,ds-1'] = {
+      data: [
+        {
+          id: 'g-1',
+          subject_type: 'account',
+          subject_id: 'acct-1',
+          action: 'dataset_edit',
+          resource_id: 'ds-1',
+          resource_type: 'dataset',
+          created_at: null,
+        },
+      ],
+    }
+    render(<GrantPanel />)
+    fireEvent.change(screen.getByTestId('resource-select'), { target: { value: 'ds-1' } })
+    // The snake_case backend value is mapped back to the `actionDatasetEdit` label.
+    const table = screen.getByRole('table')
+    expect(within(table).getByText(/actionDatasetEdit/)).toBeInTheDocument()
+  })
+
   it('renders resource, subject and grant controls', () => {
     render(<GrantPanel />)
     expect(screen.getByTestId('resource-type-select')).toBeInTheDocument()
@@ -123,7 +152,7 @@ describe('GrantPanel', () => {
     expect(h.mockCreateGrant).toHaveBeenCalledWith({
       subject_type: 'department',
       subject_id: 'dep-1',
-      actions: ['DatasetEdit', 'DatasetDelete'],
+      actions: ['dataset_edit', 'dataset_delete'],
       resource_type: 'dataset',
       resource_id: 'ds-1',
     })

@@ -1,6 +1,7 @@
 'use client'
 
-import type { DepartmentNode, KBPermissionSubjectType } from './types'
+import type { DepartmentNode, KBActionKey, KBPermissionSubjectType } from './types'
+import { backendActionToKey, KBActionEnum } from './types'
 import { Button } from '@langgenius/dify-ui/button'
 import { toast } from '@langgenius/dify-ui/toast'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -12,19 +13,7 @@ import { createGrant, fetchDepartmentTree, fetchGrants, revokeGrant } from './se
 
 type ResourceType = 'dataset' | 'document'
 
-type ActionKey =
-  | 'DatasetPreview'
-  | 'DatasetEdit'
-  | 'DatasetDelete'
-  | 'DatasetUse'
-  | 'DatasetRetrievalRecall'
-  | 'DatasetDocumentDownload'
-  | 'DatasetAccessConfig'
-  | 'DocumentRead'
-  | 'DocumentEdit'
-  | 'DocumentDownload'
-
-const DATASET_ACTIONS: ActionKey[] = [
+const DATASET_ACTIONS: KBActionKey[] = [
   'DatasetPreview',
   'DatasetEdit',
   'DatasetDelete',
@@ -32,7 +21,7 @@ const DATASET_ACTIONS: ActionKey[] = [
   'DatasetUse',
 ]
 
-const DOCUMENT_ACTIONS: ActionKey[] = ['DocumentRead', 'DocumentEdit', 'DocumentDownload']
+const DOCUMENT_ACTIONS: KBActionKey[] = ['DocumentRead', 'DocumentEdit', 'DocumentDownload']
 
 export default function GrantPanel() {
   const { t: rawT } = useTranslation('datasetPermission')
@@ -42,7 +31,7 @@ export default function GrantPanel() {
   const [resourceId, setResourceId] = useState('')
   const [subjectType, setSubjectType] = useState<KBPermissionSubjectType>('account')
   const [subjectId, setSubjectId] = useState('')
-  const [selectedActions, setSelectedActions] = useState<ActionKey[]>([])
+  const [selectedActions, setSelectedActions] = useState<KBActionKey[]>([])
 
   const { data: datasetPage } = useQuery({
     queryKey: ['dataset-permission', 'datasets'],
@@ -71,7 +60,7 @@ export default function GrantPanel() {
 
   const actions = resourceType === 'dataset' ? DATASET_ACTIONS : DOCUMENT_ACTIONS
 
-  const actionLabel = (key: ActionKey) => t(`action${key}`)
+  const actionLabel = (key: KBActionKey) => t(`action${key}`)
 
   const subjectOptions = useMemo(() => {
     if (subjectType === 'account')
@@ -81,7 +70,7 @@ export default function GrantPanel() {
     return []
   }, [subjectType, accounts, departments])
 
-  const toggleAction = (key: ActionKey) => {
+  const toggleAction = (key: KBActionKey) => {
     setSelectedActions((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
     )
@@ -95,7 +84,7 @@ export default function GrantPanel() {
       await createGrant({
         subject_type: subjectType,
         subject_id: subjectId,
-        actions: selectedActions,
+        actions: selectedActions.map((a) => KBActionEnum[a]),
         resource_type: resourceType,
         resource_id: resourceId,
       })
@@ -112,13 +101,13 @@ export default function GrantPanel() {
   const revoke = async (payload: {
     subjectId: string
     subjectType: KBPermissionSubjectType
-    actions?: ActionKey[]
+    actions?: KBActionKey[]
   }) => {
     try {
       await revokeGrant({
         subject_type: payload.subjectType,
         subject_id: payload.subjectId,
-        actions: payload.actions,
+        actions: payload.actions?.map((a) => KBActionEnum[a]),
         resource_type: resourceType,
         resource_id: resourceId,
       })
@@ -132,9 +121,9 @@ export default function GrantPanel() {
   }
 
   const subjectLabel = (type: KBPermissionSubjectType, id: string): string => {
-    if (type === 'account') return accounts.find((a) => a.id === id)?.name || id
-    if (type === 'department') return departments.find((d) => d.id === id)?.name || id
-    return id
+    if (type === 'account') return accounts.find((a) => a.id === id)?.name || '-'
+    if (type === 'department') return departments.find((d) => d.id === id)?.name || '-'
+    return '-'
   }
 
   return (
@@ -258,20 +247,21 @@ export default function GrantPanel() {
                     {subjectLabel(grant.subject_type, grant.subject_id)}
                   </td>
                   <td className="py-2 pr-2 text-text-secondary">
-                    {t(`action${grant.action as ActionKey}`)}
+                    {t(`action${backendActionToKey(grant.action) ?? grant.action}`)}
                   </td>
                   <td className="py-2 text-right">
                     <Button
                       size="small"
                       variant="ghost"
                       tone="destructive"
-                      onClick={() =>
+                      onClick={() => {
+                        const key = backendActionToKey(grant.action) ?? grant.action
                         revoke({
                           subjectId: grant.subject_id,
                           subjectType: grant.subject_type,
-                          actions: [grant.action as ActionKey],
+                          actions: key ? [key as KBActionKey] : undefined,
                         })
-                      }
+                      }}
                     >
                       {t('revoke')}
                     </Button>
