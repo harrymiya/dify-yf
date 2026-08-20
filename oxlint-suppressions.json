@@ -2708,11 +2708,6 @@
       "count": 1
     }
   },
-  "web/app/components/main-nav/components/workspace-switcher.tsx": {
-    "jsx-a11y/no-autofocus": {
-      "count": 1
-    }
-  },
   "web/app/components/plugins/install-plugin/hooks.ts": {
     "typescript/no-explicit-any": {
       "count": 4
