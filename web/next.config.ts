@@ -1,6 +1,5 @@
 import type { NextConfig } from '@/next'
 import createMDX from '@next/mdx'
-import { codeInspectorPlugin } from 'code-inspector-plugin'
 import { env } from './env'
 
 const isDev = process.env.NODE_ENV === 'development'
@@ -14,11 +13,6 @@ const nextConfig: NextConfig = {
   ...(allowedDevOrigins?.length ? { allowedDevOrigins } : {}),
   transpilePackages: ['@t3-oss/env-core', '@t3-oss/env-nextjs', 'echarts', 'zrender'],
   serverExternalPackages: ['loro-crdt'],
-  turbopack: {
-    rules: codeInspectorPlugin({
-      bundler: 'turbopack',
-    }),
-  },
   experimental: {
     // TODO: Remove when the `typescript` package can point to TypeScript 7.
     // Next.js resolves that package, while compiler-API consumers still require TypeScript 6.

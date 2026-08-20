@@ -19,7 +19,6 @@ import { getApplicationTitle } from '@/utils/document-title'
 import { CloudAnalytics } from './components/base/analytics-consent/cloud-analytics'
 import { PartnerStackCookieRecorder } from './components/billing/partner-stack/cookie-recorder'
 import { AgentationLoader } from './components/devtools/agentation-loader'
-import { ReactScanLoader } from './components/devtools/react-scan/loader'
 import { I18nServerProvider } from './components/provider/i18n-server'
 import { TanStackQueryProvider } from './query-provider'
 import './styles/globals.css'
@@ -73,9 +72,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang={locale ?? 'en'} className="h-full" suppressHydrationWarning>
-      <head>
-        <ReactScanLoader />
-      </head>
+      <head></head>
       <body className="h-full bg-background-body" {...datasetMap}>
         <CloudAnalytics />
         <div className="isolate h-full">

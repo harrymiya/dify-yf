@@ -16,7 +16,12 @@ fi
 
 echo "==> Starting Dify web dev server on :${PORT}..."
 cd "$WEB_DIR"
+# Disable Turbopack disk-persistent cache. On modest hardware the on-disk cache
+# can balloon to tens of GB and trigger long DB compaction passes on cold start,
+# stalling HTTP responses for minutes. Keep caching in-memory only (dev is
+# E2E-cold-compiled anyway). Overridable via TURBOPACK_CACHE=1.
 PORT="$PORT" \
   CONSOLE_API_URL="${CONSOLE_API_URL:-http://localhost:5001}" \
   NEXT_PUBLIC_SOCKET_URL="${NEXT_PUBLIC_SOCKET_URL:-ws://localhost:$PORT}" \
+  TURBOPACK_CACHE="${TURBOPACK_CACHE:-0}" \
 pnpm exec next dev
