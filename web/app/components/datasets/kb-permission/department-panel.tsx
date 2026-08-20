@@ -111,7 +111,7 @@ export default function DepartmentPanel() {
         <div
           className={`group flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 system-sm-regular hover:bg-state-base-hover ${
             selectedId === node.id
-              ? 'text-text-primary-on-solid bg-state-accent-solid'
+              ? 'bg-state-base-active text-components-menu-item-text-active'
               : 'text-text-primary'
           }`}
           role="button"
