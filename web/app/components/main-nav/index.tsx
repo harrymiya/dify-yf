@@ -22,7 +22,6 @@ import AccountSection from './components/account-section'
 import HelpMenu from './components/help-menu'
 import MainNavLink from './components/nav-link'
 import { MainNavSearchButton } from './components/search-button'
-import { WorkspaceCard } from './components/workspace-card'
 import { isMainNavRouteVisible, MAIN_NAV_ROUTES } from './routes'
 
 const WebAppsSection = dynamic(() => import('./components/web-apps-section'), { ssr: false })
@@ -101,9 +100,6 @@ export function MainNav({ className }: MainNavProps) {
         <div className="flex items-center justify-between pt-3 pr-2 pb-2 pl-4">
           {renderLogo()}
           <MainNavSearchButton />
-        </div>
-        <div className="p-2">
-          <WorkspaceCard />
         </div>
         <nav className="isolate flex flex-col gap-px p-2">
           {navItems.map((item) => (
