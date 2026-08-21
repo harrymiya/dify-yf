@@ -23,11 +23,11 @@ const Header = () => {
       {systemFeatures.branding.enabled && systemFeatures.branding.login_page_logo ? (
         <img
           src={systemFeatures.branding.login_page_logo}
-          className="block h-7 w-auto object-contain"
+          className="block h-[84px] w-auto object-contain"
           alt="logo"
         />
       ) : (
-        <DifyLogo alt="Dify" size="large" />
+        <DifyLogo alt="Dify" className="h-[84px] w-[192px]" />
       )}
       <div className="flex items-center gap-1">
         <LocaleMenu
