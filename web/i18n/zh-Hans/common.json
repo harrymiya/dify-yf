@@ -243,7 +243,7 @@
   "members.invalidRole": "该角色已不可用，请重新选择。",
   "members.invitationLink": "邀请链接",
   "members.invitationSent": "邀请已发送",
-  "members.invitationSentTip": "邀请已发送，对方登录 Dify 后即可访问你的团队数据。",
+  "members.invitationSentTip": "邀请已发送，对方登录智能助手 后即可访问你的团队数据。",
   "members.invite": "添加",
   "members.inviteFailed": "邀请发送失败，请重试。",
   "members.inviteLimitExceeded": "成员名额不足，无法发送这些邀请。",
