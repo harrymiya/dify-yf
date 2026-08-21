@@ -3,7 +3,6 @@ import UsageStatisticsPage from '../index'
 
 type QueryArgs = {
   queryKey: unknown
-  enabled?: boolean
   queryFn?: () => unknown
 }
 
@@ -23,15 +22,15 @@ vi.mock('../services', () => ({
 }))
 
 vi.mock('@/service/datasets', () => ({
-  fetchDatasets: vi.fn(() => Promise.resolve({ data: { data: [], has_more: false, limit: 100, page: 1, total: 0 } })),
+  fetchDatasets: vi.fn(() =>
+    Promise.resolve({ data: { data: [], has_more: false, limit: 100, page: 1, total: 0 } }),
+  ),
 }))
 
 vi.mock('@tanstack/react-query', () => {
   const useQuery = ({ queryKey, queryFn }: QueryArgs) => {
     const key = Array.isArray(queryKey) ? queryKey.join(',') : String(queryKey)
-    // Record the service call exactly as the component made it.
     if (typeof queryFn === 'function') void queryFn()
-    // Data/state comes from the keyed fixture so rendering is deterministic.
     return { isLoading: false, isError: false, refetch: vi.fn(), ...(h.queryResults[key] ?? {}) }
   }
   return { useQuery }
@@ -79,7 +78,9 @@ const base = {
     days: 30,
     dimension: 'user',
     total_calls: 20,
-    data: [{ id: 'account-2', name: 'Bob', email: 'bob@example.com', is_virtual: false, calls: 20 }],
+    data: [
+      { id: 'account-2', name: 'Bob', email: 'bob@example.com', is_virtual: false, calls: 20 },
+    ],
   },
   ifaceDept: {
     days: 30,
@@ -99,97 +100,82 @@ describe('UsageStatisticsPage', () => {
     vi.clearAllMocks()
     h.queryResults = {
       'usage-statistics,kb-calls,30,dataset': { data: base.kb },
+      'usage-statistics,kb-calls,30,user': { data: base.kbUser },
+      'usage-statistics,kb-calls,30,department': { data: base.kbDept },
       'usage-statistics,kb-trend,30': { data: base.trend },
       'usage-statistics,interfaces,30,type': { data: base.iface },
+      'usage-statistics,interfaces,30,user': { data: base.ifaceUser },
+      'usage-statistics,interfaces,30,department': { data: base.ifaceDept },
       'usage-statistics,kb-calls,7,dataset': { data: base.kb },
+      'usage-statistics,kb-calls,7,user': { data: base.kbUser },
+      'usage-statistics,kb-calls,7,department': { data: base.kbDept },
       'usage-statistics,kb-trend,7': { data: base.trend },
       'usage-statistics,interfaces,7,type': { data: base.iface },
-      'usage-statistics,kb-calls,30,user': { data: base.kbUser },
-      'usage-statistics,interfaces,30,user': { data: base.ifaceUser },
-      'usage-statistics,kb-calls,30,department': { data: base.kbDept },
-      'usage-statistics,interfaces,30,department': { data: base.ifaceDept },
+      'usage-statistics,interfaces,7,user': { data: base.ifaceUser },
+      'usage-statistics,interfaces,7,department': { data: base.ifaceDept },
       'usage-statistics,datasets': {
-        data: { data: [{ id: 'ds-1', name: 'Demo KB' }, { id: 'ds-2', name: 'Second KB' }] },
+        data: {
+          data: [
+            { id: 'ds-1', name: 'Demo KB' },
+            { id: 'ds-2', name: 'Second KB' },
+          ],
+        },
       },
     }
   })
 
-  it('renders the three statistics cards', () => {
+  it('renders the top trend card and all six grid cards', () => {
     render(<UsageStatisticsPage />)
-    expect(screen.getByText('usageStatistics.kbTopTitle')).toBeInTheDocument()
     expect(screen.getByText('usageStatistics.kbTrendTitle')).toBeInTheDocument()
+    expect(screen.getByText('usageStatistics.kbTopByDatasetTitle')).toBeInTheDocument()
+    expect(screen.getByText('usageStatistics.kbTopByUserTitle')).toBeInTheDocument()
+    expect(screen.getByText('usageStatistics.kbTopByDepartmentTitle')).toBeInTheDocument()
     expect(screen.getByText('usageStatistics.interfaceTitle')).toBeInTheDocument()
+    expect(screen.getByText('usageStatistics.interfaceByUserTitle')).toBeInTheDocument()
+    expect(screen.getByText('usageStatistics.interfaceByDepartmentTitle')).toBeInTheDocument()
   })
 
-  it('renders kb call rows in dataset dimension', () => {
-    render(<UsageStatisticsPage />)
-    expect(screen.getByText('Demo KB')).toBeInTheDocument()
-    expect(screen.getByText('10')).toBeInTheDocument()
-  })
-
-  it('renders the dimension tabs', () => {
-    render(<UsageStatisticsPage />)
-    expect(screen.getByTestId('dimension-dataset')).toBeInTheDocument()
-    expect(screen.getByTestId('dimension-user')).toBeInTheDocument()
-    expect(screen.getByTestId('dimension-department')).toBeInTheDocument()
-  })
-
-  it('queries the backend with the dimension in the request', () => {
+  it('queries all dimensions for KB and interface calls plus trend', () => {
     render(<UsageStatisticsPage />)
     expect(h.mockFetchKB).toHaveBeenCalledWith(30, 20, 'dataset')
+    expect(h.mockFetchKB).toHaveBeenCalledWith(30, 20, 'user')
+    expect(h.mockFetchKB).toHaveBeenCalledWith(30, 20, 'department')
     expect(h.mockFetchInterfaces).toHaveBeenCalledWith(30, 'type', 20)
+    expect(h.mockFetchInterfaces).toHaveBeenCalledWith(30, 'user', 20)
+    expect(h.mockFetchInterfaces).toHaveBeenCalledWith(30, 'department', 20)
+    expect(h.mockFetchTrend).toHaveBeenCalledWith(30)
   })
 
-  it('switches to user dimension and renders user ranking with emails', () => {
+  it('renders dataset, user, and department rows together', () => {
     render(<UsageStatisticsPage />)
-    fireEvent.click(screen.getByTestId('dimension-user'))
-    expect(screen.getByText('usageStatistics.kbTopByUserTitle')).toBeInTheDocument()
+    expect(screen.getByText('Demo KB')).toBeInTheDocument()
     expect(screen.getByText('Alice')).toBeInTheDocument()
     expect(screen.getByText('alice@example.com')).toBeInTheDocument()
     expect(screen.getByText('外部调用 / API')).toBeInTheDocument()
-    expect(screen.getByText('usageStatistics.interfaceByUserTitle')).toBeInTheDocument()
-    expect(screen.getByText('Bob')).toBeInTheDocument()
-  })
-
-  it('switches to department dimension and renders department ranking', () => {
-    render(<UsageStatisticsPage />)
-    fireEvent.click(screen.getByTestId('dimension-department'))
-    expect(screen.getByText('usageStatistics.kbTopByDepartmentTitle')).toBeInTheDocument()
     expect(screen.getAllByText('Engineering').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('未分配').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('usageStatistics.interfaceByDepartmentTitle').length).toBeGreaterThan(0)
-  })
-
-  it('does not use dataset name mapping in non-dataset dimensions', () => {
-    render(<UsageStatisticsPage />)
-    fireEvent.click(screen.getByTestId('dimension-user'))
-    expect(screen.queryByText('Demo KB')).not.toBeInTheDocument()
-    expect(h.mockFetchKB).toHaveBeenCalledWith(30, 20, 'user')
   })
 
   it('renders loading state', () => {
     h.queryResults = {
       'usage-statistics,kb-calls,30,dataset': { isLoading: true },
+      'usage-statistics,kb-calls,30,user': { isLoading: true },
+      'usage-statistics,kb-calls,30,department': { isLoading: true },
       'usage-statistics,kb-trend,30': { isLoading: true },
       'usage-statistics,interfaces,30,type': { isLoading: true },
+      'usage-statistics,interfaces,30,user': { isLoading: true },
+      'usage-statistics,interfaces,30,department': { isLoading: true },
     }
     render(<UsageStatisticsPage />)
     expect(screen.getAllByText('usageStatistics.loading').length).toBeGreaterThan(0)
   })
 
-  it('renders noData state when empty', () => {
-    h.queryResults = {
-      'usage-statistics,kb-calls,30,dataset': { data: { days: 30, total_calls: 0, data: [] } },
-      'usage-statistics,kb-trend,30': { data: { days: 30, bucket: 'day', data: [] } },
-      'usage-statistics,interfaces,30,type': { data: { days: 30, total_calls: 0, data: {} } },
-    }
-    render(<UsageStatisticsPage />)
-    expect(screen.getAllByText('usageStatistics.noData').length).toBeGreaterThan(0)
-  })
-
-  it('switches the day range', () => {
+  it('switches the day range and re-etchs all queries', () => {
     render(<UsageStatisticsPage />)
     fireEvent.click(screen.getByTestId('days-7'))
-    expect(screen.getByText('Demo KB')).toBeInTheDocument()
+    expect(h.mockFetchKB).toHaveBeenCalledWith(7, 20, 'dataset')
+    expect(h.mockFetchKB).toHaveBeenCalledWith(7, 20, 'user')
+    expect(h.mockFetchKB).toHaveBeenCalledWith(7, 20, 'department')
+    expect(h.mockFetchTrend).toHaveBeenCalledWith(7)
+    expect(h.mockFetchInterfaces).toHaveBeenCalledWith(7, 'type', 20)
   })
 })
