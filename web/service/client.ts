@@ -22,7 +22,7 @@ import { createTanstackQueryUtils } from '@orpc/tanstack-query'
 import { API_PREFIX, APP_VERSION, IS_MARKETPLACE, MARKETPLACE_API_PREFIX } from '@/config'
 import { isClient } from '@/utils/client'
 // oxlint-disable-next-line no-restricted-imports
-import { request, sseGeneratorPost } from './base'
+import { isAbortError, request, sseGeneratorPost } from './base'
 import { createConsoleDynamicLink } from './console-link'
 import { normalizeConsoleOpenAPIURL } from './console-openapi-url'
 
@@ -106,6 +106,8 @@ const marketplaceLink = new OpenAPILink(marketplaceRouterContract, {
   },
   interceptors: [
     onError((error) => {
+      if (isAbortError(error)) return
+
       console.error(error)
     }),
   ],

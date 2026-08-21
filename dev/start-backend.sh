@@ -15,7 +15,7 @@ ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 DOCKER_DIR="$ROOT_DIR/docker"
 API_DIR="$ROOT_DIR/api"
 
-echo "==> [1/3] Ensuring middleware (postgres/redis/weaviate/plugin_daemon) is up..."
+echo "==> [1/4] Ensuring middleware (postgres/redis/weaviate/plugin_daemon) is up..."
 if [ ! -f "$DOCKER_DIR/middleware.env" ]; then
   echo "ERROR: $DOCKER_DIR/middleware.env missing."
   echo "       Copy it from an example or create it (see repo docs) before starting the backend."
@@ -25,7 +25,7 @@ cd "$DOCKER_DIR"
 docker compose -f docker-compose.middleware.yaml --env-file middleware.env -p docker up -d --no-recreate \
   db_postgres redis weaviate plugin_daemon
 
-echo "==> [2/3] Waiting for plugin daemon (port 5002) to be ready..."
+echo "==> [2/4] Waiting for plugin daemon (port 5002) to be ready..."
 for i in $(seq 1 20); do
   if curl -s -o /dev/null "http://127.0.0.1:5002/health" 2>/dev/null; then
     break
@@ -34,7 +34,18 @@ for i in $(seq 1 20); do
 done
 echo "    (plugin daemon container status: $(docker ps --filter name=plugin_daemon --format '{{.Status}}'))"
 
-echo "==> [3/3] Running DB migrations + starting API on :5001..."
+echo "==> [3/4] Starting celery worker in background..."
+WORKER_LOG="$ROOT_DIR/dev/worker-start.log"
+if pgrep -f "celery -A app.celery worker" > /dev/null; then
+  echo "    celery worker already running, skipping (log: $WORKER_LOG)"
+else
+  nohup "$SCRIPT_DIR/start-worker" > "$WORKER_LOG" 2>&1 &
+  WORKER_PID=$!
+  trap 'kill "$WORKER_PID" 2>/dev/null' EXIT
+  echo "    worker pid: $WORKER_PID, log: $WORKER_LOG"
+fi
+
+echo "==> [4/4] Running DB migrations + starting API on :5001..."
 cd "$API_DIR"
 uv run flask db upgrade
 uv run python -m app

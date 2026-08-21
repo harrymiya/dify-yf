@@ -49,7 +49,7 @@ import { getWebAppPassport } from './webapp-auth'
 
 const TIME_OUT = 100000
 
-const isAbortError = (error: unknown) => {
+export const isAbortError = (error: unknown) => {
   if (typeof error === 'string') return error === 'AbortError' || error.startsWith('AbortError:')
 
   return (
