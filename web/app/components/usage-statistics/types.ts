@@ -21,24 +21,27 @@ export type DepartmentUsageRankItem = UsageRankItem & {
   parent_id: string | null
 }
 
-export type KBCallStatResponse = {
-  days: number
-  total_calls: number
-  dimension?: UsageDimension
-  data: KBCallStat[]
-} | {
-  days: number
-  total_calls: number
-  dimension?: UsageDimension
-  data: UserUsageRankItem[]
-} | {
-  days: number
-  total_calls: number
-  grouped_calls: number
-  aggregation: 'include_descendants'
-  dimension?: UsageDimension
-  data: DepartmentUsageRankItem[]
-}
+export type KBCallStatResponse =
+  | {
+      days: number
+      total_calls: number
+      dimension?: UsageDimension
+      data: KBCallStat[]
+    }
+  | {
+      days: number
+      total_calls: number
+      dimension?: UsageDimension
+      data: UserUsageRankItem[]
+    }
+  | {
+      days: number
+      total_calls: number
+      grouped_calls: number
+      aggregation: 'include_descendants'
+      dimension?: UsageDimension
+      data: DepartmentUsageRankItem[]
+    }
 
 export type KBTrendPoint = {
   bucket: string
@@ -51,21 +54,24 @@ export type KBTrendResponse = {
   data: KBTrendPoint[]
 }
 
-export type InterfaceCallResponse = {
-  days: number
-  total_calls: number
-  dimension?: InterfaceDimension
-  data: Record<string, number>
-} | {
-  days: number
-  total_calls: number
-  dimension?: InterfaceDimension
-  data: UserUsageRankItem[]
-} | {
-  days: number
-  total_calls: number
-  grouped_calls: number
-  aggregation: 'include_descendants'
-  dimension?: InterfaceDimension
-  data: DepartmentUsageRankItem[]
-}
+export type InterfaceCallResponse =
+  | {
+      days: number
+      total_calls: number
+      dimension?: InterfaceDimension
+      data: Record<string, number>
+    }
+  | {
+      days: number
+      total_calls: number
+      dimension?: InterfaceDimension
+      data: UserUsageRankItem[]
+    }
+  | {
+      days: number
+      total_calls: number
+      grouped_calls: number
+      aggregation: 'include_descendants'
+      dimension?: InterfaceDimension
+      data: DepartmentUsageRankItem[]
+    }

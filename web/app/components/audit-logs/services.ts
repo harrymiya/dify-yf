@@ -1,7 +1,10 @@
-import { get } from '@/service/base'
 import type { AuditLogListResponse, AuditLogQueryParams } from './types'
+// oxlint-disable-next-line no-restricted-imports -- audit log endpoints are not generated yet.
+import { get } from '@/service/base'
 
-export const fetchAuditLogs = async (params: AuditLogQueryParams): Promise<AuditLogListResponse> => {
+export const fetchAuditLogs = async (
+  params: AuditLogQueryParams,
+): Promise<AuditLogListResponse> => {
   const query = new URLSearchParams()
   if (params.log_type) query.set('log_type', params.log_type)
   if (params.action) query.set('action', params.action)

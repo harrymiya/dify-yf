@@ -1,4 +1,3 @@
-import { get } from '@/service/base'
 import type {
   InterfaceCallResponse,
   InterfaceDimension,
@@ -6,6 +5,8 @@ import type {
   KBTrendResponse,
   UsageDimension,
 } from './types'
+// oxlint-disable-next-line no-restricted-imports -- usage statistics endpoints are not generated yet.
+import { get } from '@/service/base'
 
 export const fetchKBCallStats = async (
   days: number,

@@ -1,26 +1,25 @@
 'use client'
 
 import type { AuditLogItem, AuditLogType } from './types'
+import type { DepartmentNode } from '@/app/components/datasets/kb-permission/types'
 import { Button } from '@langgenius/dify-ui/button'
 import { Input } from '@langgenius/dify-ui/input'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { KBPageLayout } from '@/app/components/datasets/kb-page-layout'
-// oxlint-disable-next-line no-restricted-imports -- KB permission feature endpoints are not generated yet.
 import { fetchDepartmentTree } from '@/app/components/datasets/kb-permission/services'
-import type { DepartmentNode } from '@/app/components/datasets/kb-permission/types'
 import { fetchDatasets } from '@/service/datasets'
 import { useMembers } from '@/service/use-common'
 import { fetchAuditLogs } from './services'
 
-const RESOURCE_LABEL_KEY: Record<string, string> = {
+const RESOURCE_LABEL_KEY = {
   dataset: 'resourceDataset',
   document: 'resourceDocument',
   app: 'resourceApp',
   department: 'resourceDepartment',
   role: 'resourceRole',
-}
+} as const
 
 const resourceLabel = (
   row: AuditLogItem,
@@ -136,10 +135,7 @@ export default function AuditLogsPage() {
 
   const departmentOptions = useMemo(() => flattenDepartments(departmentTree), [departmentTree])
 
-  const memberById = useMemo(
-    () => new Map(members.map((m) => [m.id, m])),
-    [members],
-  )
+  const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members])
 
   const applyFilters = () => {
     setApplied({ logType, action, status, resourceId, departmentId })
@@ -289,9 +285,7 @@ export default function AuditLogsPage() {
                             : '-')}
                     </td>
                     <td className="max-w-48 truncate bg-background-section-burn px-2 py-2 text-text-secondary">
-                      {row.department_names?.length
-                        ? row.department_names.join(' / ')
-                        : '-'}
+                      {row.department_names?.length ? row.department_names.join(' / ') : '-'}
                     </td>
                     <td className="max-w-48 truncate bg-background-section-burn px-2 py-2 text-text-tertiary">
                       {resourceLabel(row, datasets, departmentById, t)}
