@@ -22,15 +22,26 @@ Fusion strategy (``strategy``):
 from __future__ import annotations
 
 import hashlib
+import json
+import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
+from operator import itemgetter
 from typing import TYPE_CHECKING, Any
 
+from sqlalchemy.orm import sessionmaker
+
 from core.rag.datasource.retrieval_service import RetrievalService
+from core.rag.index_processor.constant.query_type import QueryType
 from core.rag.models.document import Document
+from extensions.ext_database import db
 from models.audit_log import AuditLogStatus, AuditLogType
+from models.dataset import DatasetQuery
+from models.enums import CreatorUserRole, DatasetQuerySource
 from services.audit_log_service import AuditLogService
 from services.kb_permission_service import KBPermissionService
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -98,12 +109,12 @@ class FusionService:
         query: str,
         dataset_ids: list[str],
         *,
-        session: "Session",
+        session: Session,
         top_k: int = 10,
         score_threshold: float | None = 0.0,
         strategy: str = FusionStrategy.RRF,
         max_workers: int = 4,
-        account: "Account | None" = None,
+        account: Account | None = None,
         action: str | None = None,
         allowed_dataset_ids: set[str] | None = None,
     ) -> FusionResult:
@@ -164,20 +175,64 @@ class FusionService:
         # Runtime app/workflow calls pass no account and are intentionally unaffected.
         if account is not None:
             tenant_id = getattr(account, "current_tenant_id", None)
+            account_id = getattr(account, "id", None)
             if tenant_id:
                 AuditLogService.record(
                     tenant_id=tenant_id,
                     log_type=AuditLogType.RETRIEVAL,
                     action="fusion.retrieve",
                     session=session,
-                    user_id=getattr(account, "id", None),
+                    user_id=account_id,
                     user_type="account",
                     status=AuditLogStatus.SUCCESS,
                     resource_type="dataset",
                     detail={"query": query, "datasets": list(allowed_dataset_ids), "hits": len(fused)},
                 )
 
+            # Dataset call statistic: record one query row per distinct dataset that
+            # actually produced a fused hit (console/account-driven retrieval).
+            hit_dataset_ids = {r.dataset_id for r in fused if r.dataset_id}
+            if account_id and hit_dataset_ids:
+                FusionService._record_dataset_queries(
+                    query=query,
+                    dataset_ids=sorted(hit_dataset_ids),
+                    account_id=account_id,
+                )
+
         return FusionResult(query=query, records=fused)
+
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    def _record_dataset_queries(*, query: str, dataset_ids: list[str], account_id: str) -> None:
+        """Persist DatasetQuery rows in an independent session.
+
+        This instrumentation is a side effect of a successful interactive fused
+        retrieval. It runs in its own transaction so it never commits or closes
+        the caller's request-scoped session, and failures here are non-fatal so a
+        stat write can never break the retrieval itself.
+        """
+        try:
+            content = json.dumps([{"content_type": QueryType.TEXT_QUERY.value, "content": query}])
+            rows = [
+                DatasetQuery(
+                    dataset_id=dataset_id,
+                    content=content,
+                    source=DatasetQuerySource.HIT_TESTING,
+                    source_app_id=None,
+                    created_by_role=CreatorUserRole.ACCOUNT,
+                    created_by=account_id,
+                )
+                for dataset_id in dataset_ids
+            ]
+        except Exception:
+            logger.warning("Failed to prepare fused-retrieval dataset query stats", exc_info=True)
+            return
+
+        try:
+            with sessionmaker(bind=db.engine, expire_on_commit=False).begin() as independent_session:
+                independent_session.add_all(rows)
+        except Exception:
+            logger.warning("Failed to persist fused-retrieval dataset query stats", exc_info=True)
 
     # ------------------------------------------------------------------ #
     @staticmethod
@@ -186,7 +241,7 @@ class FusionService:
         dataset_id: str,
         top_k: int,
         score_threshold: float | None,
-        account: "Account | None",
+        account: Account | None,
     ) -> list[Document]:
         return RetrievalService.retrieve(
             retrieval_method=_retrieval_method(),
@@ -252,10 +307,7 @@ class FusionService:
         strategy: str,
     ) -> list[FusionRecord]:
         """Assign a cross-dataset fused score per record per the chosen strategy."""
-        if strategy == FusionStrategy.MAX:
-            for record in records:
-                record.score = _safe_float(record.metadata.get("score", 0.0))
-        elif strategy == FusionStrategy.SUM:
+        if strategy in {FusionStrategy.MAX, FusionStrategy.SUM}:
             for record in records:
                 record.score = _safe_float(record.metadata.get("score", 0.0))
         else:  # FusionStrategy.RRF (default)
@@ -288,7 +340,7 @@ class FusionService:
                 by_dataset[ds_id].append((src_score, record))
 
         for ds_id, entries in by_dataset.items():
-            ranked = sorted(entries, key=lambda e: e[0], reverse=True)
+            ranked = sorted(entries, key=itemgetter(0), reverse=True)
             for rank, (_, record) in enumerate(ranked, start=1):
                 rrf[record.key] += 1.0 / (k + rank)
 

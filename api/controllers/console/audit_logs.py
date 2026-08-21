@@ -1,14 +1,15 @@
 """Audit log query endpoints - customization requirement 5.
 
 Read-side API for the 5-class audit trail with tenant scoping, filters
-(log type / action / resource / user / status / time range) and pagination.
-Only the tenant owner or admin may read audit logs.
+(log type / action / resource / user / status / time range / department) and
+pagination. Only the tenant owner or admin may read audit logs.
 """
 
+from uuid import UUID
+
 from flask_restx import Resource
-from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from werkzeug.exceptions import Forbidden
+from werkzeug.exceptions import BadRequest, Forbidden
 
 from controllers.common.session import with_session
 from controllers.console import console_ns
@@ -22,6 +23,15 @@ from libs.login import login_required
 from models import Account, AuditLog, AuditLogType
 from models.account import TenantAccountRole
 from services.audit_log_service import AuditLogService
+
+
+def _is_valid_uuid(value: str) -> bool:
+    """Return True only for a well-formed UUID string."""
+    try:
+        UUID(value)
+        return True
+    except (ValueError, TypeError):
+        return False
 
 
 @console_ns.route("/workspaces/current/audit-logs")
@@ -59,6 +69,15 @@ class AuditLogListApi(Resource):
 
             status_enum = AuditLogStatus(status)
 
+        department_id = request.args.get("department_id") or None
+        member_account_ids = None
+        if department_id:
+            if not _is_valid_uuid(department_id):
+                raise BadRequest("department_id must be a valid UUID.")
+            member_account_ids = AuditLogService.resolve_department_member_account_ids(
+                session, tenant_id=current_tenant_id, department_id=department_id
+            )
+
         rows = AuditLogService.query(
             session,
             tenant_id=current_tenant_id,
@@ -67,30 +86,57 @@ class AuditLogListApi(Resource):
             resource_id=resource_id,
             user_id=user_id,
             status=status_enum,
+            member_account_ids=member_account_ids,
             offset=(page - 1) * page_size,
             limit=page_size,
         )
 
-        total = session.scalar(
-            select(func.count(AuditLog.id)).where(AuditLog.tenant_id == current_tenant_id)
-        ) or 0
+        total = AuditLogService.count(
+            session,
+            tenant_id=current_tenant_id,
+            log_type=type_enum,
+            action=action,
+            resource_id=resource_id,
+            user_id=user_id,
+            status=status_enum,
+            member_account_ids=member_account_ids,
+        )
 
-        data = [
-            {
-                "id": r.id,
-                "user_id": r.user_id,
-                "user_type": r.user_type,
-                "log_type": r.log_type,
-                "action": r.action,
-                "status": r.status,
-                "resource_type": r.resource_type,
-                "resource_id": r.resource_id,
-                "detail": r.detail,
-                "ip": r.ip,
-                "request_id": r.request_id,
-                "trace_id": r.trace_id,
-                "created_at": r.created_at.isoformat() if r.created_at else None,
+        user_ids = {r.user_id for r in rows if r.user_id}
+        accounts, account_departments = AuditLogService.load_account_enrichment(
+            session, tenant_id=current_tenant_id, account_ids=user_ids
+        )
+
+        def _enrich(row: AuditLog) -> dict:
+            user_name = None
+            user_email = None
+            department_ids: list[str] = []
+            department_names: list[str] = []
+            if row.user_id:
+                if row.user_id in accounts:
+                    user_name, user_email = accounts[row.user_id]
+                for dept_id, dept_name in account_departments.get(row.user_id, []):
+                    department_ids.append(dept_id)
+                    department_names.append(dept_name)
+            return {
+                "id": row.id,
+                "user_id": row.user_id,
+                "user_type": row.user_type,
+                "user_name": user_name,
+                "user_email": user_email,
+                "department_ids": department_ids,
+                "department_names": department_names,
+                "log_type": row.log_type,
+                "action": row.action,
+                "status": row.status,
+                "resource_type": row.resource_type,
+                "resource_id": row.resource_id,
+                "detail": row.detail,
+                "ip": row.ip,
+                "request_id": row.request_id,
+                "trace_id": row.trace_id,
+                "created_at": row.created_at.isoformat() if row.created_at else None,
             }
-            for r in rows
-        ]
+
+        data = [_enrich(r) for r in rows]
         return {"data": data, "total": total, "page": page, "page_size": page_size}, 200

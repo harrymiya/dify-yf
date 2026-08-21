@@ -5,6 +5,7 @@ ranking and the B5 permission-whitelist filtration. Retrieval and permission
 resolution are mocked so no database / vector store is required.
 """
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from core.rag.models.document import Document
@@ -131,7 +132,8 @@ class TestRetrieveFusionIntegration:
     def test_parallel_fetch_then_fuse(self):
         account = None
         # two datasets: ds-1 top score, ds-2 lower
-        def fake_retrieve(query, dataset_id, top_k, score_threshold, account):
+
+        def fake_retrieve(query, dataset_id, top_k, score_threshold, account):  # noqa: ARG001
             if dataset_id == "ds-1":
                 return [_doc("a", score=0.9, document_id="d-1"), _doc("b", score=0.8, document_id="d-2")]
             return [_doc("b", score=0.5, document_id="d-2"), _doc("c", score=0.4, document_id="d-3")]
@@ -177,3 +179,99 @@ class TestRetrieveAuditWiring:
         ) as mock_record:
             FusionService.retrieve("q", ["ds-1"], session=MagicMock())
             mock_record.assert_not_called()
+
+
+class TestRetrieveDatasetQueryWiring:
+    """C2 extension: interactive fused retrieval records per-dataset DatasetQuery rows;
+    runtime (no-account) retrieval does not."""
+
+    def test_interactive_account_records_dataset_queries(self):
+        account = MagicMock()
+        account.current_tenant_id = "tenant-1"
+        account.id = "account-1"
+        docs = [_doc("a", score=0.9, document_id="d-1")]
+
+        with patch(
+            "core.rag.retrieval.fusion_service.KBPermissionService.granted_resource_ids",
+            return_value=None,
+        ), patch.object(FusionService, "_retrieve_one", return_value=docs), patch(
+            "core.rag.retrieval.fusion_service.AuditLogService.record"
+        ), patch.object(
+            FusionService, "_record_dataset_queries"
+        ) as mock_rec:
+            result = FusionService.retrieve("q", ["ds-1"], session=MagicMock(), account=account)
+
+            mock_rec.assert_called_once()
+            kwargs = mock_rec.call_args.kwargs
+            assert kwargs["account_id"] == "account-1"
+            assert kwargs["query"] == "q"
+            assert kwargs["dataset_ids"] == ["ds-1"]
+            assert result.query == "q"
+
+    def test_no_hits_skips_dataset_queries(self):
+        account = MagicMock()
+        account.current_tenant_id = "tenant-1"
+        account.id = "account-1"
+        with patch(
+            "core.rag.retrieval.fusion_service.KBPermissionService.granted_resource_ids",
+            return_value=None,
+        ), patch.object(FusionService, "_retrieve_one", return_value=[]), patch(
+            "core.rag.retrieval.fusion_service.AuditLogService.record"
+        ), patch.object(FusionService, "_record_dataset_queries") as mock_rec:
+            FusionService.retrieve("q", ["ds-1"], session=MagicMock(), account=account)
+            mock_rec.assert_not_called()
+
+    def test_runtime_no_account_skips_dataset_queries(self):
+        with patch.object(FusionService, "_retrieve_one", return_value=[]), patch.object(
+            FusionService, "_record_dataset_queries"
+        ) as mock_rec:
+            FusionService.retrieve("q", ["ds-1"], session=MagicMock())
+            mock_rec.assert_not_called()
+
+    def test_record_dataset_queries_writes_rows_in_independent_session(self):
+        """Prepare one DatasetQuery per dataset, committed via an independent session."""
+
+        class _FakeSession:
+            def __init__(self):
+                self.added = []
+
+            def add_all(self, rows):
+                self.added.extend(rows)
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+        fake = _FakeSession()
+        factory = MagicMock()
+        factory.begin.return_value = fake
+
+        with (
+            patch("core.rag.retrieval.fusion_service.db", SimpleNamespace(engine=MagicMock())),
+            patch("core.rag.retrieval.fusion_service.sessionmaker", return_value=factory),
+        ):
+            FusionService._record_dataset_queries(
+                query="q", dataset_ids=["ds-1", "ds-2"], account_id="acc-1"
+            )
+
+        dataset_ids = [row.dataset_id for row in fake.added]
+        assert dataset_ids == ["ds-1", "ds-2"]
+        for row in fake.added:
+            assert row.created_by_role == "account"
+            assert row.source == "hit_testing"
+            assert row.created_by == "acc-1"
+
+    def test_record_dataset_queries_failure_swallowed(self):
+        """A stat-log failure must not raise and must not break the caller."""
+
+        def _boom(*args, **kwargs):  # noqa: ARG001
+            raise RuntimeError("db down")
+
+        with patch(
+            "core.rag.retrieval.fusion_service.sessionmaker", side_effect=_boom
+        ):
+            FusionService._record_dataset_queries(
+                query="q", dataset_ids=["ds-1"], account_id="acc-1"
+            )

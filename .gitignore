@@ -272,3 +272,7 @@ dify-agent-runtime/.integration-state
 # local plugin runtime artifacts
 api/plugin_daemon_local/
 api/plugin_storage_local/
+
+# 本地多agent协作/测试临时文档（task提示词、评审prompt、验收记录）
+.test-local/
+

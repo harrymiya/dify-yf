@@ -16,13 +16,15 @@ also passes the interactive account down so ``GraphService.retrieve`` re-enforce
 the B5 whitelist at the retrieval layer (C5 security baseline).
 """
 
+import json
+import logging
 from uuid import UUID
 
 from flask import request
 from flask_restx import Resource
 from pydantic import BaseModel, Field
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 from werkzeug.exceptions import NotFound
 
 from controllers.common.kb_wraps import kb_permission_required
@@ -37,13 +39,17 @@ from controllers.console.wraps import (
     with_current_user,
 )
 from core.rag.graph import GraphService
+from core.rag.index_processor.constant.query_type import QueryType
+from extensions.ext_database import db
 from libs.login import login_required
 from models import Account, Dataset, Document, KBPermissionAction, KBResourceType
 from models.audit_log import AuditLogStatus, AuditLogType
-from models.dataset import DocumentSegment
-from models.enums import SegmentStatus
+from models.dataset import DatasetQuery, DocumentSegment
+from models.enums import CreatorUserRole, DatasetQuerySource, SegmentStatus
 from services.audit_log_service import AuditLogService
 from services.dataset_service import DatasetService
+
+logger = logging.getLogger(__name__)
 
 
 class GraphBuildPayload(BaseModel):
@@ -266,8 +272,40 @@ class KBGraphRetrieveApi(Resource):
             resource_id=str(dataset_id),
             detail={"query": req_data.query, "hits": len(getattr(result, "records", []) or [])},
         )
+        KBGraphRetrieveApi._record_dataset_query(
+            query=req_data.query,
+            dataset_id=str(dataset_id),
+            account_id=current_user.id,
+        )
         session.commit()
         return {"data": result.to_payload()}, 200
+
+    @staticmethod
+    def _record_dataset_query(*, query: str, dataset_id: str, account_id: str) -> None:
+        """Persist a DatasetQuery row for a graph retrieval in an independent session.
+
+        The retrieve route runs on a read-only session, so instrumentation is
+        committed in its own transaction. Failure to record must never break the
+        retrieval response, hence the surrounding try/except.
+        """
+        try:
+            content = json.dumps([{"content_type": QueryType.TEXT_QUERY.value, "content": query}])
+            dataset_query = DatasetQuery(
+                dataset_id=dataset_id,
+                content=content,
+                source=DatasetQuerySource.HIT_TESTING,
+                source_app_id=None,
+                created_by_role=CreatorUserRole.ACCOUNT,
+                created_by=account_id,
+            )
+            with sessionmaker(bind=db.engine, expire_on_commit=False).begin() as independent_session:
+                independent_session.add(dataset_query)
+        except Exception:
+            logger.warning(
+                "Failed to persist kb-graph retrieval dataset query (dataset_id=%s)",
+                dataset_id,
+                exc_info=True,
+            )
 
 
 @console_ns.route("/datasets/<uuid:dataset_id>/kb-graph")
