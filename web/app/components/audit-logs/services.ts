@@ -7,6 +7,7 @@ export const fetchAuditLogs = async (params: AuditLogQueryParams): Promise<Audit
   if (params.action) query.set('action', params.action)
   if (params.status) query.set('status', params.status)
   if (params.resource_id) query.set('resource_id', params.resource_id)
+  if (params.department_id) query.set('department_id', params.department_id)
   if (params.page && params.page > 0) query.set('page', String(params.page))
   if (params.page_size && params.page_size > 0) query.set('page_size', String(params.page_size))
   const qs = query.toString()

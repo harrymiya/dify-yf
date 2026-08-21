@@ -5,6 +5,10 @@ export type AuditLogItem = {
   id: string
   user_id: string | null
   user_type: string | null
+  user_name?: string | null
+  user_email?: string | null
+  department_ids?: string[]
+  department_names?: string[]
   log_type: AuditLogType
   action: string
   status: AuditLogStatus
@@ -29,6 +33,7 @@ export type AuditLogQueryParams = {
   action?: string
   status?: string
   resource_id?: string
+  department_id?: string
   page?: number
   page_size?: number
 }

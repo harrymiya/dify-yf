@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next'
 import { KBPageLayout } from '@/app/components/datasets/kb-page-layout'
 // oxlint-disable-next-line no-restricted-imports -- KB permission feature endpoints are not generated yet.
 import { fetchDepartmentTree } from '@/app/components/datasets/kb-permission/services'
+import type { DepartmentNode } from '@/app/components/datasets/kb-permission/types'
 import { fetchDatasets } from '@/service/datasets'
 import { useMembers } from '@/service/use-common'
 import { fetchAuditLogs } from './services'
@@ -47,6 +48,18 @@ const resourceLabel = (
 
 const TYPE_ORDER: AuditLogType[] = ['qna', 'retrieval', 'download', 'permission_change', 'system']
 
+const flattenDepartments = (nodes: DepartmentNode[]): Array<{ id: string; name: string }> => {
+  const flat: Array<{ id: string; name: string }> = []
+  const walk = (list: DepartmentNode[]) => {
+    for (const n of list) {
+      flat.push({ id: n.id, name: n.name })
+      if (n.children?.length) walk(n.children)
+    }
+  }
+  walk(nodes)
+  return flat
+}
+
 const userTypeLabelKey = (userType: string): string => {
   switch (userType) {
     case 'account':
@@ -70,7 +83,14 @@ export default function AuditLogsPage() {
   const [action, setAction] = useState('')
   const [status, setStatus] = useState('')
   const [resourceId, setResourceId] = useState('')
-  const [applied, setApplied] = useState({ logType: '', action: '', status: '', resourceId: '' })
+  const [departmentId, setDepartmentId] = useState('')
+  const [applied, setApplied] = useState({
+    logType: '',
+    action: '',
+    status: '',
+    resourceId: '',
+    departmentId: '',
+  })
   const [page, setPage] = useState(1)
   const pageSize = 20
 
@@ -82,6 +102,7 @@ export default function AuditLogsPage() {
         action: applied.action || undefined,
         status: applied.status || undefined,
         resource_id: applied.resourceId || undefined,
+        department_id: applied.departmentId || undefined,
         page,
         page_size: pageSize,
       }),
@@ -113,13 +134,15 @@ export default function AuditLogsPage() {
     return map
   }, [departmentTree])
 
+  const departmentOptions = useMemo(() => flattenDepartments(departmentTree), [departmentTree])
+
   const memberById = useMemo(
     () => new Map(members.map((m) => [m.id, m])),
     [members],
   )
 
   const applyFilters = () => {
-    setApplied({ logType, action, status, resourceId })
+    setApplied({ logType, action, status, resourceId, departmentId })
     setPage(1)
   }
 
@@ -170,6 +193,20 @@ export default function AuditLogsPage() {
             className="w-56"
             data-testid="filter-resource"
           />
+          <select
+            value={departmentId}
+            onChange={(e) => setDepartmentId(e.target.value)}
+            className="h-8 rounded-lg border border-divider-regular bg-background-default px-2 system-sm-regular text-text-primary"
+            aria-label={t('departmentFilter')}
+            data-testid="filter-department"
+          >
+            <option value="">{t('allDepartments')}</option>
+            {departmentOptions.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
           <Button size="small" variant="primary" onClick={applyFilters} data-testid="apply-filters">
             {t('search')}
           </Button>
@@ -181,7 +218,8 @@ export default function AuditLogsPage() {
               setAction('')
               setStatus('')
               setResourceId('')
-              setApplied({ logType: '', action: '', status: '', resourceId: '' })
+              setDepartmentId('')
+              setApplied({ logType: '', action: '', status: '', resourceId: '', departmentId: '' })
               setPage(1)
             }}
           >
@@ -212,6 +250,7 @@ export default function AuditLogsPage() {
                   <th className="px-2 py-2 font-medium">{t('colAction')}</th>
                   <th className="px-2 py-2 font-medium">{t('colStatus')}</th>
                   <th className="px-2 py-2 font-medium">{t('colUser')}</th>
+                  <th className="px-2 py-2 font-medium">{t('colDepartment')}</th>
                   <th className="px-2 py-2 font-medium">{t('colResource')}</th>
                   <th className="px-2 py-2 font-medium">{t('colIp')}</th>
                 </tr>
@@ -240,13 +279,19 @@ export default function AuditLogsPage() {
                       </span>
                     </td>
                     <td className="max-w-48 truncate bg-background-section-burn px-2 py-2 text-text-secondary">
-                      {row.user_type === 'account' && row.user_id
-                        ? memberById.get(row.user_id)?.name ||
-                          memberById.get(row.user_id)?.email ||
-                          t(userTypeLabelKey('account'))
-                        : row.user_type
-                          ? t(userTypeLabelKey(row.user_type))
-                          : '-'}
+                      {row.user_name ??
+                        (row.user_type === 'account' && row.user_id
+                          ? memberById.get(row.user_id)?.name ||
+                            memberById.get(row.user_id)?.email ||
+                            t(userTypeLabelKey('account'))
+                          : row.user_type
+                            ? t(userTypeLabelKey(row.user_type))
+                            : '-')}
+                    </td>
+                    <td className="max-w-48 truncate bg-background-section-burn px-2 py-2 text-text-secondary">
+                      {row.department_names?.length
+                        ? row.department_names.join(' / ')
+                        : '-'}
                     </td>
                     <td className="max-w-48 truncate bg-background-section-burn px-2 py-2 text-text-tertiary">
                       {resourceLabel(row, datasets, departmentById, t)}

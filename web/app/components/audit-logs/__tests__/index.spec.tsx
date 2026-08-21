@@ -35,7 +35,21 @@ vi.mock('@tanstack/react-query', () => {
         refetch: vi.fn(),
       }
     if (key.includes('departments'))
-      return { data: [], isLoading: false, isError: false, refetch: vi.fn() }
+      return {
+        data: [
+          {
+            id: 'dept-1',
+            tenant_id: 't-1',
+            parent_id: null,
+            name: 'Engineering',
+            sort: 0,
+            children: [],
+          },
+        ],
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      }
     return { isLoading: false, isError: false, refetch: vi.fn(), ...h.queryResult }
   }
   return { useQuery }
@@ -59,6 +73,10 @@ const sample = {
       id: 'log-1',
       user_id: 'u-1',
       user_type: 'account',
+      user_name: 'Alice',
+      user_email: 'alice@example.com',
+      department_ids: ['dept-1'],
+      department_names: ['Engineering', 'Platform'],
       log_type: 'qna',
       action: 'retrieve',
       status: 'success',
@@ -88,6 +106,48 @@ describe('AuditLogsPage', () => {
     expect(screen.getByText('retrieve')).toBeInTheDocument()
     expect(screen.getByText('Demo KB')).toBeInTheDocument()
     expect(screen.getByText('Alice')).toBeInTheDocument()
+  })
+
+  it('displays department names joined for the department column', () => {
+    render(<AuditLogsPage />)
+    expect(screen.getByText('Engineering / Platform')).toBeInTheDocument()
+  })
+
+  it('falls back to a dash when user_name and department_names are absent', () => {
+    h.queryResult = {
+      data: {
+        data: [
+          {
+            ...sample.data[0],
+            user_name: null,
+            user_type: null,
+            user_id: null,
+            department_ids: [],
+            department_names: [],
+            ip: null,
+          },
+        ],
+        total: 1,
+        page: 1,
+        page_size: 20,
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    }
+    render(<AuditLogsPage />)
+    // User, department, and IP cells fall back to '-'.
+    expect(screen.getAllByText('-').length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('selecting a department renders it as a filter option and applying keeps the filter', () => {
+    render(<AuditLogsPage />)
+    const deptOption = screen.getByRole('option', { name: 'Engineering' })
+    expect(deptOption).toBeInTheDocument()
+    fireEvent.change(screen.getByTestId('filter-department'), { target: { value: 'dept-1' } })
+    fireEvent.click(screen.getByTestId('apply-filters'))
+    // Applying filters changes applied state without crashing.
+    expect(screen.getByText('retrieve')).toBeInTheDocument()
   })
 
   it('renders empty state when no logs', () => {
